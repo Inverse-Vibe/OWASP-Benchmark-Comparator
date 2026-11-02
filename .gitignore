@@ -1,0 +1,8 @@
+# Everything a run writes: working clones of the benchmarks, tool logs,
+# scorecards. Reproducible from the pins; never committed.
+work/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

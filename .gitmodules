@@ -1,0 +1,12 @@
+[submodule "BenchmarkJava"]
+	path = BenchmarkJava
+	url = https://github.com/OWASP-Benchmark/BenchmarkJava.git
+	shallow = true
+[submodule "BenchmarkPython"]
+	path = BenchmarkPython
+	url = https://github.com/OWASP-Benchmark/BenchmarkPython.git
+	shallow = true
+[submodule "BenchmarkUtils"]
+	path = BenchmarkUtils
+	url = https://github.com/OWASP-Benchmark/BenchmarkUtils.git
+	shallow = true

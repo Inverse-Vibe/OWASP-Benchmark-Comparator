@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "owasp-benchmark-comparator"
+version = "0.0.1"
+description = "Run security tools on the OWASP Benchmark with OWASP's own scripts and print its own scorecard."
+readme = "README.md"
+requires-python = ">=3.12"
+# None. The tools are OWASP's scripts and the scoring is OWASP's BenchmarkUtils, so
+# the standard library is all the orchestration needs.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["ruff>=0.17.3", "mypy>=2.4.1", "pytest>=9.2.0"]
+
+[project.scripts]
+compare_owasp_benchmark = "owasp_benchmark_comparator.compare:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/owasp_benchmark_comparator"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+# OWASP's repositories, pinned and never edited here.
+extend-exclude = ["BenchmarkJava", "BenchmarkPython", "BenchmarkUtils", "work"]
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "I", "UP", "B", "SIM", "RUF",
+  "ANN", "FBT", "SLF", "TID", "RET", "ARG", "C4", "PTH", "PT", "N", "ERA", "S",
+]
+ignore = [
+  "S603",  # running OWASP's scripts is the job
+  "S607",  # `git`, `bash` and `mvn` are resolved from PATH like any developer tool
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN", "PLR2004"]
+
+[tool.mypy]
+strict = true
+files = ["src"]

@@ -1,0 +1,7 @@
+# The tools the comparison can run. Each one runs through the script its OWASP
+# Benchmark repository ships, unchanged: `<language> = "<script in that repo>"`.
+# A tool with no script for a language is not run on it.
+
+[sonarqube]
+name = "SonarQube"
+java = "scripts/runSonarQube.sh"
