@@ -20,25 +20,17 @@ def _row(tool: str, score: str) -> Row:
 
 
 def test_a_run_keeps_the_rows_it_did_not_score() -> None:
-    first = leaderboard.merge(
-        {}, JAVA, "abc", [_row("A v1", "40.00%"), _row("Ref v1", "10.00%")], {"Ref v1"}, "d1"
-    )
-    second = leaderboard.merge(first, JAVA, "abc", [_row("B v2", "20.00%")], set(), "d2")
-    rows = second["java"]["rows"]
-    assert [row["tool"] for row in rows] == ["A v1", "B v2", "Ref v1"]
-    assert {row["tool"]: row["source"] for row in rows} == {
-        "A v1": "run",
-        "B v2": "run",
-        "Ref v1": "reference",
-    }
+    first = leaderboard.merge({}, JAVA, "abc", [_row("A v1", "40.00%")], "d1")
+    second = leaderboard.merge(first, JAVA, "abc", [_row("B v2", "20.00%")], "d2")
+    assert [row["tool"] for row in second["java"]["rows"]] == ["A v1", "B v2"]
     assert second["java"]["updated"] == "d2"
 
 
 def test_a_rerun_with_the_same_score_keeps_its_date() -> None:
-    data = leaderboard.merge({}, JAVA, "abc", [_row("A v1", "40.00%")], set(), "d1")
-    data = leaderboard.merge(data, JAVA, "abc", [_row("A v1", "40.00%")], set(), "d2")
+    data = leaderboard.merge({}, JAVA, "abc", [_row("A v1", "40.00%")], "d1")
+    data = leaderboard.merge(data, JAVA, "abc", [_row("A v1", "40.00%")], "d2")
     assert data["java"]["rows"][0]["scored"] == "d1"
-    data = leaderboard.merge(data, JAVA, "abc", [_row("A v1", "41.00%")], set(), "d3")
+    data = leaderboard.merge(data, JAVA, "abc", [_row("A v1", "41.00%")], "d3")
     assert data["java"]["rows"][0]["scored"] == "d3"
 
 
@@ -49,7 +41,6 @@ def test_each_row_links_the_report_benchmarkutils_wrote(tmp_path: Path) -> None:
         JAVA,
         "abc",
         [_row("SonarQube v26.10", "31.43%"), _row("Gone", "1.00%")],
-        set(),
         "d1",
         tmp_path,
     )
@@ -69,7 +60,7 @@ def test_update_rewrites_only_the_data_block(tmp_path: Path) -> None:
     scorecard = tmp_path / "scorecard"
     scorecard.mkdir()
     (scorecard / "Scorecard_Home.html").write_text("home")
-    leaderboard.update(page, JAVA, "abc", [_row("A v1", "40.00%")], set(), scorecard)
+    leaderboard.update(page, JAVA, "abc", [_row("A v1", "40.00%")], scorecard)
     html = page.read_text(encoding="utf-8")
     assert html.startswith("<p>keep</p>")
     assert html.endswith("</script><p>me</p>")

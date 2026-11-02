@@ -1,4 +1,5 @@
 name = "ShiftLeft Scan"
 
-# The benchmark's own script, unchanged.
-java = "scripts/runShiftLeftScan.sh"
+# BenchmarkJava's own scripts/runShiftLeftScan.sh, then the files its root
+# container wrote handed back to the user running the comparison.
+java = "./run.sh"

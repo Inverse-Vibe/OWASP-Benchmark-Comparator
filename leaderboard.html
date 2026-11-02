@@ -8,10 +8,10 @@
 <meta name="description" content="A comparison leaderboard of security tools on the OWASP Benchmark, scored by OWASP's own BenchmarkUtils. Not an official OWASP leaderboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Geist+Mono:wght@400;500;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
   /* Inverse's dark /home: the near-black ground, flat cards drawn by one hairline,
-     the brand blue for what was run here, grey for OWASP's own reference results.
+     the brand blue, the Inverse Vibe wordmark from the console.
      Layout: one column - title, notice, benchmark tabs, the ranked list, the
      TPR/FPR chart, then how the numbers are made. Dark only. */
   :root {
@@ -28,7 +28,7 @@
     --accent-hover: #8cc7f8;
     --ok: #7bb926;
     --bad: #fe4c58;
-    --reference: #a1a1aa;
+    --mark: #79bdf7;
     /* Names the chart script uses. */
     --surface: var(--card);
     --rule: var(--line);
@@ -51,7 +51,7 @@
     -webkit-font-smoothing: antialiased;
   }
   .page {
-    max-width: 1120px;
+    max-width: 1600px;
     margin: 0 auto;
     padding-block: 40px 64px;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -67,7 +67,22 @@
     border-radius: 6px;
   }
 
+  .top { display: grid; gap: 16px; align-items: start; }
   header { display: grid; gap: 8px; }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .5em;
+    width: max-content;
+    color: var(--ink);
+    font: 700 15px/1 var(--data);
+    letter-spacing: .16em;
+    text-decoration: none;
+    margin-bottom: 14px;
+  }
+  .brand:hover { color: var(--ink); text-decoration: none; }
+  .brand svg { width: 1.57em; height: 1.45em; display: block; flex: none; }
+  .brand .vibe { font: 700 1.5em/.8 "Caveat", cursive; letter-spacing: 0; margin-left: .45em; }
   .eyebrow {
     font: 500 12px/1 var(--data);
     letter-spacing: .06em;
@@ -88,10 +103,10 @@
     border-radius: 16px;
   }
   .notice {
-    padding: 16px 20px;
+    padding: 14px 18px;
     display: grid;
-    gap: 6px;
-    max-width: 86ch;
+    gap: 4px;
+    font-size: 13px;
   }
   .notice strong { font: 600 15px/1.3 var(--display); color: var(--ink); }
   .notice p { margin: 0; color: var(--muted); }
@@ -122,6 +137,9 @@
     color: var(--muted-2);
   }
 
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .bar .meta { margin-left: auto; }
+  .main { display: grid; gap: 20px; align-items: start; }
   .meta {
     display: flex;
     flex-wrap: wrap;
@@ -131,9 +149,6 @@
   }
   .meta b { color: var(--ink-soft); font-weight: 500; }
 
-  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--muted); font-size: 13px; }
-  .controls label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
-  .controls input { accent-color: var(--accent); }
   .segmented { display: inline-flex; gap: 4px; }
   .segmented button {
     appearance: none;
@@ -148,7 +163,7 @@
   }
   .segmented button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-strong); background: var(--raised); }
 
-  .table-wrap { overflow-x: auto; }
+  .table-wrap { overflow-x: auto; min-width: 0; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th, td { padding: 12px 16px; text-align: left; white-space: nowrap; }
   thead th {
@@ -169,22 +184,12 @@
   tbody tr.linked:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
   td.num, th.num { text-align: right; font: 400 13px/1 var(--data); color: var(--ink-soft); }
   td.rank { font: 500 13px/1 var(--data); color: var(--muted-2); width: 1%; }
-  td.tool { font-weight: 600; color: var(--ink); }
+  td.tool { font-weight: 600; color: var(--ink); white-space: normal; min-width: 140px; }
   td.tool a { color: var(--ink); }
   td.tool a:hover { color: var(--accent); }
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    height: 24px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font: 600 12px/1 var(--ui);
-  }
-  .chip.run { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  .chip.reference { color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
   .kind { font: 400 13px/1 var(--data); color: var(--muted); }
 
-  .score { display: grid; grid-template-columns: 64px minmax(96px, 1fr); gap: 12px; align-items: center; min-width: 200px; }
+  .score { display: grid; grid-template-columns: 60px minmax(60px, 1fr); gap: 10px; align-items: center; min-width: 150px; }
   .score .value { text-align: right; font: 500 14px/1 var(--data); color: var(--ink); }
   .track { position: relative; height: 6px; border-radius: 999px; background: var(--raised); }
   .track .zero { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--line-strong); }
@@ -194,7 +199,7 @@
   .empty { padding: 32px 18px; color: var(--muted); white-space: normal; }
   .empty code { font-family: var(--data); color: var(--ink); }
 
-  .chart-block { display: grid; gap: 12px; padding: 20px; }
+  .chart-block { display: grid; gap: 10px; padding: 18px; min-width: 0; }
   .chart-block h2, .method h2 {
     margin: 0;
     font: 600 18px/1.3 var(--display);
@@ -202,18 +207,16 @@
     text-wrap: balance;
   }
   .chart-block p { margin: 0; color: var(--muted); max-width: 68ch; }
-  .chart { max-width: 620px; }
+  .chart { max-width: 560px; }
   .chart svg { display: block; width: 100%; height: auto; }
   .chart text { font-family: var(--data); font-size: 11px; fill: var(--muted-2); }
   .chart .axis-title { fill: var(--muted); font-size: 12px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
-  .legend span { display: inline-flex; gap: 8px; align-items: center; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
   .method { display: grid; gap: 12px; padding: 20px; }
   .method p, .method li { margin: 0; max-width: 78ch; color: var(--muted); }
   .method li b { color: var(--ink-soft); font-weight: 600; }
-  .method ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+  .method ul { margin: 0; padding-left: 18px; display: grid; gap: 8px 32px; }
+  .method pre.cmd { margin-top: 8px; }
   .method code { font: 400 12px/1 var(--data); color: var(--ink-soft); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
   pre.cmd {
     margin: 0;
@@ -227,6 +230,14 @@
   }
   footer { font-size: 12px; color: var(--muted-2); padding-top: 4px; }
 
+  @media (min-width: 1000px) {
+    .top { grid-template-columns: minmax(0, 1fr) minmax(0, 560px); }
+    .method ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1200px) {
+    .main { grid-template-columns: minmax(0, 1fr) 400px; }
+    .chart-block { position: sticky; top: 16px; }
+  }
   @media (max-width: 560px) {
     th, td { padding: 10px 10px; }
     .chart-block, .method { padding: 16px; }
@@ -238,72 +249,74 @@
 </head>
 <body>
 <div class="page">
-  <header>
-    <div class="eyebrow">Comparison leaderboard</div>
-    <h1>OWASP Benchmark Comparison</h1>
-    <p class="lede">Security tools run against the same OWASP Benchmark test suites and scored by the same OWASP scorer, so their results can be compared side by side. Select a tool to open the full OWASP scorecard for it.</p>
-  </header>
+  <div class="top">
+    <header>
+      <a class="brand" href="https://github.com/Inverse-Vibe/OWASP-Benchmark-Comparator" aria-label="Inverse Vibe">
+        <svg viewBox="1.4 2 21.6 20" fill="none" aria-hidden="true" focusable="false">
+          <rect x="2.4" y="3" width="6" height="18" rx="1.8" stroke="var(--ink)" stroke-width="1.5"/>
+          <rect x="4" y="4.6" width="2.8" height="8" rx=".7" fill="var(--ink)"/>
+          <rect x="4" y="13.6" width="2.8" height="5.8" rx=".7" fill="var(--mark)"/>
+          <path transform="translate(6.4292 19.3742) scale(0.023373 -0.023373)" fill="var(--ink)" stroke="var(--ink)" stroke-width="21.39" stroke-linejoin="round" d="M264 -60Q259 -58 257 -54Q255 -50 253 -38Q253 -27 247 -22Q241 -17 224 -13Q213 -2 206 12.5Q199 27 195 59.5Q191 92 187 156Q189 191 190.5 215Q192 239 194 260Q196 281 198.5 305Q201 329 206 365Q204 388 208.5 415Q213 442 210 458Q217 480 219 508.5Q221 537 228 559Q230 576 232.5 591Q235 606 235 616Q233 636 239.5 658Q246 680 268 690Q274 692 284.5 692Q295 692 301 690Q317 683 319.5 668Q322 653 321 642Q323 631 323.5 604Q324 577 321.5 544.5Q319 512 312 481Q304 440 299.5 397.5Q295 355 293 314Q289 232 285 178Q281 124 284 100Q284 97 284.5 91.5Q285 86 287 82.5Q289 79 292 79Q296 80 298.5 85Q301 90 304.5 100Q308 110 314 123Q327 148 340.5 177.5Q354 207 364 234Q382 276 400 306Q418 336 434 373Q440 389 455.5 419.5Q471 450 485 476Q502 502 517.5 526Q533 550 554 590Q583 638 604 660.5Q625 683 641 683Q652 685 659.5 683.5Q667 682 674 672Q682 661 684 647Q686 633 677.5 611Q669 589 643 552Q623 522 598.5 482Q574 442 553.5 406.5Q533 371 524 354Q519 343 515 331Q511 319 503 309Q493 299 476 266Q459 233 443 201Q425 159 414.5 135.5Q404 112 397.5 97Q391 82 385 68Q379 54 370 33Q365 16 356.5 4Q348 -8 347 -14Q340 -25 322.5 -37Q305 -49 288 -56Q271 -63 264 -60Z"/>
+        </svg>
+        <span aria-hidden="true">Inverse<span class="vibe">Vibe</span></span>
+      </a>
+      <div class="eyebrow">Comparison leaderboard</div>
+      <h1>OWASP Benchmark Comparison</h1>
+      <p class="lede">Security tools run against the same OWASP Benchmark test suites and scored by the same OWASP scorer. Select a tool to open its full OWASP scorecard.</p>
+    </header>
+    <aside class="notice card" aria-label="Notice">
+      <strong>Not an official OWASP leaderboard</strong>
+      <p>We do not own OWASP, the OWASP Benchmark or BenchmarkUtils, and this page is not affiliated with or endorsed by the OWASP Foundation. OWASP publishes no official leaderboard, so this page puts results side by side to help people compare tools on the same dataset and the same evaluation. Every score is copied from a scorecard produced by OWASP's own BenchmarkUtils, run on OWASP's unmodified benchmark repositories.</p>
+    </aside>
+  </div>
 
-  <aside class="notice card" aria-label="Notice">
-    <strong>Not an official OWASP leaderboard</strong>
-    <p>We do not own OWASP, the OWASP Benchmark or BenchmarkUtils, and this page is not affiliated with or endorsed by the OWASP Foundation. OWASP publishes no official leaderboard, so this page collects results in one place to help people compare tools on the same dataset and the same evaluation. Every score here is copied from a scorecard produced by OWASP's own BenchmarkUtils, run on OWASP's unmodified benchmark repositories.</p>
-  </aside>
-
-  <section aria-label="Results">
-    <div class="tabs" role="tablist" id="tabs"></div>
-  </section>
-
-  <div class="meta" id="meta"></div>
-
-  <div class="controls">
-    <label for="show-reference"><input type="checkbox" id="show-reference" checked> Show OWASP reference results</label>
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="Benchmark" id="tabs"></div>
     <div class="segmented" role="group" aria-label="Tool type" id="kind-filter"></div>
+    <div class="meta" id="meta"></div>
   </div>
 
-  <div class="table-wrap card">
-    <table id="board">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col" data-key="tool"><button type="button">Tool</button></th>
-          <th scope="col" data-key="type"><button type="button">Type</button></th>
-          <th scope="col" data-key="source"><button type="button">Source</button></th>
-          <th scope="col" data-key="score" aria-sort="descending"><button type="button">Score</button></th>
-          <th scope="col" class="num" data-key="tpr"><button type="button">TPR</button></th>
-          <th scope="col" class="num" data-key="fpr"><button type="button">FPR</button></th>
-          <th scope="col" data-key="scored"><button type="button">Scored</button></th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-  </div>
-
-  <section class="chart-block card" aria-labelledby="chart-title">
-    <h2 id="chart-title">True positives against false positives</h2>
-    <p>The same view the OWASP scorecard draws. Each point is one tool. The dashed diagonal is random guessing; the further a tool sits above it, toward the top left, the better.</p>
-    <div class="chart" id="chart"></div>
-    <div class="legend">
-      <span><i class="dot" style="background: var(--accent)"></i> Run by this project</span>
-      <span><i class="dot" style="background: var(--reference)"></i> OWASP reference result</span>
+  <div class="main">
+    <div class="table-wrap card">
+      <table id="board">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col" data-key="tool"><button type="button">Tool</button></th>
+            <th scope="col" data-key="type"><button type="button">Type</button></th>
+            <th scope="col" data-key="score" aria-sort="descending"><button type="button">Score</button></th>
+            <th scope="col" class="num" data-key="tpr"><button type="button">TPR</button></th>
+            <th scope="col" class="num" data-key="fpr"><button type="button">FPR</button></th>
+            <th scope="col" class="num" data-key="scored"><button type="button">Scored</button></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
     </div>
-  </section>
+
+    <section class="chart-block card" aria-labelledby="chart-title">
+      <h2 id="chart-title">True positives against false positives</h2>
+      <p>The view the OWASP scorecard draws. The dashed diagonal is random guessing; the higher and further left a tool sits, the better.</p>
+      <div class="chart" id="chart"></div>
+    </section>
+  </div>
 
   <section class="method card" aria-labelledby="method-title">
     <h2 id="method-title">How the numbers are made</h2>
     <ul>
       <li><b>Dataset.</b> OWASP's own <a href="https://github.com/OWASP-Benchmark/BenchmarkJava">BenchmarkJava</a> (2,740 test cases) and <a href="https://github.com/OWASP-Benchmark/BenchmarkPython">BenchmarkPython</a> (1,230), pinned to one commit each and never edited. Each test case is either really vulnerable or a deliberate false alarm.</li>
       <li><b>Evaluation.</b> OWASP's <a href="https://github.com/OWASP-Benchmark/BenchmarkUtils">BenchmarkUtils</a> reads each tool's own report and writes the scorecard, through each benchmark's own <code>createScorecards.sh</code>. Nothing in this project maps findings or computes scores.</li>
-      <li><b>Score.</b> True-positive rate minus false-positive rate (the Youden index), averaged over the vulnerability categories, so each category counts equally whatever its size. 0% is what random guessing scores; a negative score is worse than guessing.</li>
-      <li><b>Sources.</b> <span class="chip reference">OWASP reference</span> rows come from the results OWASP ships inside each benchmark repository. <span class="chip run">Run here</span> rows are tools this project ran on the same pinned benchmark.</li>
-    </ul>
-    <p>Reproduce any row:</p>
-    <pre class="cmd">git clone --recurse-submodules https://github.com/Inverse-Vibe/OWASP-Benchmark-Comparator.git
+      <li><b>Score.</b> True-positive rate minus false-positive rate (the Youden index), averaged over the vulnerability categories, so each category counts equally whatever its size. 0% is random guessing; below 0% is worse than guessing.</li>
+      <li><b>Runs.</b> Every row is a tool this project ran itself, at the version shown, with its default configuration, on the pinned benchmark. Reproduce one with:
+        <pre class="cmd">git clone --recurse-submodules https://github.com/Inverse-Vibe/OWASP-Benchmark-Comparator.git
 cd OWASP-Benchmark-Comparator &amp;&amp; pip install -e .
 compare_owasp_benchmark java --tool sonarqube</pre>
+      </li>
+    </ul>
   </section>
 
   <footer>
-    OWASP, OWASP Benchmark and BenchmarkUtils are projects of the OWASP Foundation. Tool names are trademarks of their owners. Results reflect each tool's default configuration at the version shown.
+    OWASP, OWASP Benchmark and BenchmarkUtils are projects of the OWASP Foundation. Tool names are trademarks of their owners.
   </footer>
 </div>
 
@@ -323,17 +336,17 @@ compare_owasp_benchmark java --tool sonarqube</pre>
     { id: "java", label: "Java" },
     { id: "python", label: "Python" }
   ];
-  var state = { language: "java", key: "score", direction: -1, reference: true, kind: "all" };
+  var state = { language: "java", key: "score", direction: -1, kind: "all" };
 
   var hash = location.hash.replace("#", "");
   if (hash === "java" || hash === "python") state.language = hash;
+  else if (!((data.java && data.java.rows) || []).length) state.language = "python";
 
   var tabs = document.getElementById("tabs");
   var rowsEl = document.getElementById("rows");
   var metaEl = document.getElementById("meta");
   var chartEl = document.getElementById("chart");
   var kindEl = document.getElementById("kind-filter");
-  var referenceBox = document.getElementById("show-reference");
 
   function rowsFor(language) {
     return (data[language] && data[language].rows) || [];
@@ -416,7 +429,6 @@ compare_owasp_benchmark java --tool sonarqube</pre>
 
   function visibleRows() {
     var rows = rowsFor(state.language).filter(function (row) {
-      if (!state.reference && row.source === "reference") return false;
       if (state.kind !== "all" && row.type !== state.kind) return false;
       return true;
     });
@@ -458,7 +470,7 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       else th.removeAttribute("aria-sort");
     });
     if (!rows.length) {
-      var cell = el("td", { colspan: "8", className: "empty" });
+      var cell = el("td", { colspan: "7", className: "empty" });
       cell.appendChild(document.createTextNode("No results for " + state.language + " yet. Run "));
       cell.appendChild(el("code", { text: "compare_owasp_benchmark " + state.language }));
       cell.appendChild(document.createTextNode(" to add them."));
@@ -482,14 +494,10 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       tr.appendChild(el("td", { className: "rank", text: String(ranked.indexOf(row) + 1) }));
       tr.appendChild(el("td", { className: "tool" }, [name]));
       tr.appendChild(el("td", { className: "kind", text: row.type }));
-      tr.appendChild(el("td", {}, [el("span", {
-        className: "chip " + row.source,
-        text: row.source === "reference" ? "OWASP reference" : "Run here"
-      })]));
       tr.appendChild(scoreCell(row.score));
       tr.appendChild(el("td", { className: "num", text: pct(row.tpr) }));
       tr.appendChild(el("td", { className: "num", text: pct(row.fpr) }));
-      tr.appendChild(el("td", { className: "kind", text: row.scored || "" }));
+      tr.appendChild(el("td", { className: "num", text: row.scored || "" }));
       rowsEl.appendChild(tr);
     });
   }
@@ -525,7 +533,7 @@ compare_owasp_benchmark java --tool sonarqube</pre>
     add("text", { x: x(50), y: height - 6, "text-anchor": "middle", "class": "axis-title" }, "False-positive rate");
     add("text", { x: 14, y: y(50), "text-anchor": "middle", "class": "axis-title", transform: "rotate(-90 14 " + y(50) + ")" }, "True-positive rate");
     rows.forEach(function (row) {
-      var color = row.source === "reference" ? "var(--reference)" : "var(--accent)";
+      var color = "var(--accent)";
       var dot = add("circle", { cx: x(row.fpr), cy: y(row.tpr), r: 5.5, fill: color, stroke: "var(--surface)", "stroke-width": 1.5 });
       var title = document.createElementNS(ns, "title");
       title.textContent = row.tool + ": TPR " + pct(row.tpr) + ", FPR " + pct(row.fpr) + ", score " + pct(row.score);
@@ -550,15 +558,10 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       if (state.key === key) state.direction = -state.direction;
       else {
         state.key = key;
-        state.direction = key === "tool" || key === "type" || key === "source" ? 1 : -1;
+        state.direction = key === "tool" || key === "type" ? 1 : -1;
       }
       renderTable();
     });
-  });
-  referenceBox.addEventListener("change", function () {
-    state.reference = referenceBox.checked;
-    renderTable();
-    renderChart();
   });
 
   render();

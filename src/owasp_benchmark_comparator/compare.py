@@ -3,12 +3,12 @@
     compare_owasp_benchmark java                     every tool that runs on Java
     compare_owasp_benchmark java --tool sonarqube    just these
 
-For the chosen benchmark, in a fresh clone of its pinned commit:
+For the chosen benchmark, in fresh clones of its pinned commit:
 
 1. each tool's script - from its folder under tools/, or one the benchmark
-   repository ships - which leaves a results file in `results/`
-2. that repository's `createScorecards.sh`, which scores everything in
-   `results/` - the tools just run and the reference results OWASP ships
+   repository ships - in a clone of its own, leaving a results file in `results/`
+2. that repository's `createScorecards.sh`, on a clone whose `results/` holds
+   just those files - the results OWASP ships are taken out first
 
 and the leaderboard from the scorecard it writes. Needs bash, git and Maven on
 PATH (or --java-home / --maven-home), plus whatever each tool script needs.
@@ -17,7 +17,8 @@ PATH (or --java-home / --maven-home), plus whatever each tool script needs.
 from __future__ import annotations
 
 import argparse
-import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,7 +26,6 @@ from owasp_benchmark_comparator import __version__, leaderboard
 from owasp_benchmark_comparator.benchmarks import (
     BENCHMARKS,
     ROOT,
-    Benchmark,
     Environment,
     RunError,
     fresh_clone,
@@ -37,6 +37,8 @@ from owasp_benchmark_comparator.scorecard import Row, read, render
 
 #: The comparison page; its data block is rewritten after every run.
 PAGE = ROOT / "leaderboard.html"
+#: Not a results file: the benchmark keeps results/ in git with it.
+KEEP = frozenset({".placeholder"})
 
 
 def snapshot(results: Path) -> dict[str, tuple[int, int]]:
@@ -79,21 +81,6 @@ def scorecard(clone: Path, env: Environment, bash: str, log: Path) -> list[Row]:
     return read(home)
 
 
-def reference_tools(
-    benchmark: Benchmark, clone: Path, work: Path, env: Environment, bash: str, pin: str
-) -> set[str]:
-    """The rows OWASP's shipped results make on their own, scored once per pin -
-    so the page can tell OWASP's reference results from tools run here."""
-    cache = work / benchmark.id / f"reference-{pin[:12]}.json"
-    if cache.exists():
-        return set(json.loads(cache.read_text(encoding="utf-8")))
-    print("[reference] scoring the results OWASP ships ...", flush=True)
-    rows = scorecard(clone, env, bash, work / benchmark.id / "logs" / "reference.log")
-    names = sorted(row.tool for row in rows)
-    cache.write_text(json.dumps(names, indent=1), encoding="utf-8")
-    return set(names)
-
-
 def compare(args: argparse.Namespace) -> int:
     benchmark = BENCHMARKS[args.language]
     tools = [tool for tool in load_tools() if benchmark.id in tool.scripts]
@@ -113,20 +100,34 @@ def compare(args: argparse.Namespace) -> int:
     clone = work / benchmark.id / benchmark.directory
     pin = pinned(ROOT / benchmark.directory, env)
     fresh_clone(ROOT / benchmark.directory, clone, env)
-    reference = reference_tools(benchmark, clone, work, env, bash, pin)
-    shipped = snapshot(clone / "results")
+    # Only what is run here is scored: the results OWASP ships in the benchmark
+    # come out of this working clone (never the submodule) before scoring.
+    for path in (clone / "results").iterdir():
+        if path.is_file() and path.name not in KEEP:
+            path.unlink()
 
     failed = 0
+    carried: list[str] = []
     for tool in tools:
         missing = [name for name in tool.requires if not env.variables.get(name)]
         if missing:
             # Not a failure: a tool that needs an account is optional until given one.
             print(f"[{tool.id}] skipped: set {', '.join(missing)}", flush=True)
             continue
-        script = tool.script(benchmark.id, clone)
+        # Each tool in its own fresh clone: a tool that builds the project leaves
+        # target/ behind - owned by root, from a container - and the next tool's
+        # build cannot write there. Only its results file is carried over.
+        own = work / benchmark.id / "runs" / tool.id / benchmark.directory
+        try:
+            fresh_clone(ROOT / benchmark.directory, own, env)
+        except (OSError, subprocess.CalledProcessError) as error:
+            print(f"[{tool.id}] FAILED: could not reset {own}: {error}", file=sys.stderr)
+            failed += 1
+            continue
+        script = tool.script(benchmark.id, own)
         print(f"[{tool.id}] {script.relative_to(script.parents[1])} ...", flush=True)
         log = work / benchmark.id / "logs" / f"{tool.id}.log"
-        before = snapshot(clone / "results")
+        before = snapshot(own / "results")
         cache = work / "cache" / tool.id
         cache.mkdir(parents=True, exist_ok=True)
         given = {
@@ -137,7 +138,7 @@ def compare(args: argparse.Namespace) -> int:
             "TOOL_CACHE": str(cache),
         }
         try:
-            env.run([bash, str(script)], clone, log, given)
+            env.run([bash, str(script)], own, log, given)
         except RunError as error:
             print(f"[{tool.id}] FAILED: {error}", file=sys.stderr)
             failed += 1
@@ -145,20 +146,26 @@ def compare(args: argparse.Namespace) -> int:
         # OWASP's scripts do not stop at the first error, so one can fail midway
         # and still exit 0. A tool that wrote nothing to results/ was not run.
         # Written, not added: Bandit's script rewrites the file OWASP ships.
-        if not changed(before, snapshot(clone / "results")):
+        written = changed(before, snapshot(own / "results"))
+        if not written:
             print(f"[{tool.id}] FAILED: wrote nothing to results/ - see {log}", file=sys.stderr)
             failed += 1
+            continue
+        for name in written:
+            shutil.copy2(own / "results" / name, clone / "results" / name)
+            carried.append(name)
 
+    if not carried:
+        raise RunError("no tool wrote a results file - nothing to score")
     print("[scorecard] createScorecards.sh ...", flush=True)
     rows = scorecard(clone, env, bash, work / benchmark.id / "logs" / "scorecard.log")
 
     print()
     print(render(benchmark.title, rows))
-    written = changed(shipped, snapshot(clone / "results"))
-    print(f"\n  results from this run: {', '.join(written) or 'none'}")
+    print(f"\n  results from this run: {', '.join(sorted(carried))}")
     print(f"  scorecard: {clone / 'scorecard' / 'Scorecard_Home.html'}")
     if not args.no_leaderboard:
-        leaderboard.update(PAGE, benchmark, pin, rows, reference, clone / "scorecard")
+        leaderboard.update(PAGE, benchmark, pin, rows, clone / "scorecard")
         print(f"  leaderboard: {PAGE}")
     return 1 if failed else 0
 

@@ -45,7 +45,6 @@ def merge(
     benchmark: Benchmark,
     pin: str,
     rows: list[Row],
-    reference: set[str],
     today: str,
     reports: Path | None = None,
 ) -> dict[str, Any]:
@@ -53,7 +52,6 @@ def merge(
     entry = data.setdefault(benchmark.id, {})
     previous = {row["tool"]: row for row in entry.get("rows", [])}
     for row in rows:
-        source = "reference" if row.tool in reference else "run"
         unchanged = previous.get(row.tool, {})
         report = report_name(row, reports) if reports else None
         previous[row.tool] = {
@@ -62,9 +60,7 @@ def merge(
             "tpr": _percent(row.tpr),
             "fpr": _percent(row.fpr),
             "score": _percent(row.score),
-            "source": source,
-            # A reference row is OWASP's own result; the date is when it was last
-            # scored here, which for a rerun with the same numbers stays put.
+            # When it was last scored here; a rerun with the same numbers keeps it.
             "scored": unchanged.get("scored", today)
             if unchanged.get("score") == _percent(row.score)
             else today,
@@ -92,7 +88,6 @@ def update(
     benchmark: Benchmark,
     pin: str,
     rows: list[Row],
-    reference: set[str],
     scorecard: Path,
 ) -> None:
     reports = page.parent / "scorecards" / benchmark.id
@@ -103,7 +98,7 @@ def update(
         raise ValueError(f"{page} has no leaderboard-data block")
     data = json.loads(found.group(2) or "{}")
     today = datetime.now(UTC).date().isoformat()
-    merged = merge(data, benchmark, pin, rows, reference, today, reports)
+    merged = merge(data, benchmark, pin, rows, today, reports)
     block = "\n" + json.dumps(merged, indent=2) + "\n"
     page.write_text(
         html[: found.start(2)] + block + html[found.end(2) :], encoding="utf-8", newline="\n"
