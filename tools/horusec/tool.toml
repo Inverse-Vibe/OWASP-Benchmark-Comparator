@@ -1,0 +1,5 @@
+name = "Horusec"
+
+# No benchmark ships a Horusec script.
+java = "./run.sh"
+python = "./run.sh"

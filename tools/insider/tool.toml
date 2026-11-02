@@ -1,0 +1,5 @@
+name = "Insider"
+
+# BenchmarkJava's scripts/runInsider.sh, with the insider binary on PATH.
+# Insider has no Python support.
+java = "./run.sh"

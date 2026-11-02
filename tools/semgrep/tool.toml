@@ -1,0 +1,5 @@
+name = "Semgrep"
+
+java = "scripts/runSemgrep.sh"
+# BenchmarkPython ships no Semgrep script; run.sh is BenchmarkJava's, for Python.
+python = "./run.sh"

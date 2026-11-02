@@ -1,0 +1,6 @@
+name = "Precaution"
+
+# BenchmarkJava's scripts/runPrecaution.sh, with precli on PATH; for Python, the
+# same command (BenchmarkPython ships no Precaution script).
+java = "./run.sh"
+python = "./run.sh"

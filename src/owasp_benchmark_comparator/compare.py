@@ -33,6 +33,20 @@ from owasp_benchmark_comparator.benchmarks import (
 from owasp_benchmark_comparator.scorecard import leaderboard, render
 
 
+def snapshot(results: Path) -> dict[str, tuple[int, int]]:
+    """Each file's size and modification time."""
+    return {
+        path.name: (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in results.iterdir()
+        if path.is_file()
+    }
+
+
+def changed(before: dict[str, tuple[int, int]], after: dict[str, tuple[int, int]]) -> list[str]:
+    """Files added or rewritten since `before`."""
+    return sorted(name for name, stamp in after.items() if before.get(name) != stamp)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="compare_owasp_benchmark",
@@ -65,18 +79,27 @@ def compare(args: argparse.Namespace) -> int:
     print(f"[scorer] installing {install_scorer(work, env)[:12]} ...", flush=True)
     clone = work / benchmark.id / benchmark.directory
     fresh_clone(ROOT / benchmark.directory, clone, env)
-    shipped = {path.name for path in (clone / "results").iterdir()}
+    shipped = snapshot(clone / "results")
 
     failed = 0
     for tool in tools:
+        missing = [name for name in tool.requires if not env.variables.get(name)]
+        if missing:
+            # Not a failure: a tool that needs an account is optional until given one.
+            print(f"[{tool.id}] skipped: set {', '.join(missing)}", flush=True)
+            continue
         script = tool.script(benchmark.id, clone)
         print(f"[{tool.id}] {script.relative_to(script.parents[1])} ...", flush=True)
         log = work / benchmark.id / "logs" / f"{tool.id}.log"
-        before = {path.name for path in (clone / "results").iterdir()}
+        before = snapshot(clone / "results")
+        cache = work / "cache" / tool.id
+        cache.mkdir(parents=True, exist_ok=True)
         given = {
             "BENCHMARK_LANGUAGE": benchmark.id,
             "BENCHMARK_RESULTS_PREFIX": benchmark.results_prefix,
             "TOOL_DIR": str(tool.directory),
+            # Kept between runs, for downloads too big to fetch every time.
+            "TOOL_CACHE": str(cache),
         }
         try:
             env.run([bash, str(script)], clone, log, given)
@@ -85,8 +108,9 @@ def compare(args: argparse.Namespace) -> int:
             failed += 1
             continue
         # OWASP's scripts do not stop at the first error, so one can fail midway
-        # and still exit 0. A tool that left nothing in results/ was not run.
-        if {path.name for path in (clone / "results").iterdir()} <= before:
+        # and still exit 0. A tool that wrote nothing to results/ was not run.
+        # Written, not added: Bandit's script rewrites the file OWASP ships.
+        if not changed(before, snapshot(clone / "results")):
             print(f"[{tool.id}] FAILED: wrote nothing to results/ - see {log}", file=sys.stderr)
             failed += 1
 

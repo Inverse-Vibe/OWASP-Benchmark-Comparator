@@ -1,0 +1,4 @@
+name = "SpotBugs"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runSpotBugs.sh"

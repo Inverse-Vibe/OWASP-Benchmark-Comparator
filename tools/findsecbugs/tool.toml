@@ -1,0 +1,4 @@
+name = "FindSecBugs (SpotBugs plugin)"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runFindSecBugs.sh"

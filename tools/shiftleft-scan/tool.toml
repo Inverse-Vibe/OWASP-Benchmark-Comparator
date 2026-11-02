@@ -1,0 +1,4 @@
+name = "ShiftLeft Scan"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runShiftLeftScan.sh"

@@ -116,6 +116,16 @@ def test_a_clone_is_reset_to_the_pin_every_time(tmp_path: Path) -> None:
     assert (clone / "results" / "shipped.json").read_text() == "{}"
 
 
+def test_a_rewritten_results_file_counts_as_written(tmp_path: Path) -> None:
+    """Bandit's script rewrites the file OWASP ships under the same name."""
+    (tmp_path / "shipped.sarif").write_text("{}")
+    before = compare.snapshot(tmp_path)
+    assert compare.changed(before, compare.snapshot(tmp_path)) == []
+    (tmp_path / "shipped.sarif").write_text('{"runs": []}')
+    (tmp_path / "new.json").write_text("{}")
+    assert compare.changed(before, compare.snapshot(tmp_path)) == ["new.json", "shipped.sarif"]
+
+
 def test_an_unknown_tool_is_refused_before_anything_runs(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

@@ -1,0 +1,5 @@
+name = "Bearer"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runBearer.sh"
+python = "scripts/runBearer.sh"

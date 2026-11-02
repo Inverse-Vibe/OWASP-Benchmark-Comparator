@@ -56,6 +56,8 @@ class Tool:
     #: Language -> the script that runs it: `./x` in the tool's folder, anything
     #: else a script the benchmark repository ships.
     scripts: dict[str, str]
+    #: Environment variables it cannot run without - an account token, say.
+    requires: tuple[str, ...] = ()
 
     def script(self, language: str, clone: Path) -> Path:
         script = self.scripts[language]
@@ -74,6 +76,7 @@ def load_tools(root: Path = TOOLS) -> list[Tool]:
                 name=entry.get("name", manifest.parent.name),
                 directory=manifest.parent,
                 scripts={key: value for key, value in entry.items() if key in BENCHMARKS},
+                requires=tuple(entry.get("requires", ())),
             )
         )
     return tools

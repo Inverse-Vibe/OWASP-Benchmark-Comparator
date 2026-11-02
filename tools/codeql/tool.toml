@@ -1,0 +1,4 @@
+name = "CodeQL"
+
+java = "./run.sh"
+python = "./run.sh"

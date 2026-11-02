@@ -1,0 +1,4 @@
+name = "PMD"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runPMD.sh"

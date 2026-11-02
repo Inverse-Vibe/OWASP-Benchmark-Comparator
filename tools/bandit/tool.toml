@@ -1,0 +1,4 @@
+name = "Bandit"
+
+# The benchmark's own script, unchanged.
+python = "scripts/runBandit.sh"

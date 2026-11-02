@@ -1,0 +1,9 @@
+name = "Snyk Code"
+
+# A free Snyk account's API token: https://app.snyk.io/account
+requires = ["SNYK_TOKEN"]
+
+# BenchmarkJava's scripts/runSnykSAST.sh, with the snyk CLI on PATH; for Python,
+# the same command (BenchmarkPython ships no Snyk script).
+java = "./run.sh"
+python = "./run.sh"

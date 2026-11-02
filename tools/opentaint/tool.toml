@@ -1,0 +1,4 @@
+name = "OpenTaint"
+
+# The benchmark's own script, unchanged.
+java = "scripts/runOpenTaint.sh"
