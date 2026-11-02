@@ -97,6 +97,21 @@
     text-wrap: balance;
   }
   .lede { margin: 0; max-width: 68ch; color: var(--muted); }
+  .repo-link {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    padding: 7px 13px;
+    width: max-content;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    font: 500 13px/1 var(--ui);
+  }
+  .repo-link:hover { border-color: var(--line-strong); color: var(--ink); text-decoration: none; background: var(--card); }
+  .repo-link svg { width: 15px; height: 15px; fill: currentColor; }
 
   .card {
     background: var(--card);
@@ -264,6 +279,10 @@
       <div class="eyebrow">Comparison leaderboard</div>
       <h1>OWASP Benchmark Comparison</h1>
       <p class="lede">Security tools run against the same OWASP Benchmark test suites and scored by the same OWASP scorer. Select a tool to open its full OWASP scorecard.</p>
+      <a class="repo-link" href="https://github.com/Inverse-Vibe/OWASP-Benchmark-Comparator">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View the code on GitHub
+      </a>
     </header>
     <aside class="notice card" aria-label="Notice">
       <strong>Not an official OWASP leaderboard</strong>
@@ -273,7 +292,6 @@
 
   <div class="bar">
     <div class="tabs" role="tablist" aria-label="Benchmark" id="tabs"></div>
-    <div class="segmented" role="group" aria-label="Tool type" id="kind-filter"></div>
     <div class="meta" id="meta"></div>
   </div>
 
@@ -284,7 +302,6 @@
           <tr>
             <th scope="col">#</th>
             <th scope="col" data-key="tool"><button type="button">Tool</button></th>
-            <th scope="col" data-key="type"><button type="button">Type</button></th>
             <th scope="col" data-key="score" aria-sort="descending"><button type="button">Score</button></th>
             <th scope="col" class="num" data-key="tpr"><button type="button">TPR</button></th>
             <th scope="col" class="num" data-key="fpr"><button type="button">FPR</button></th>
@@ -518,7 +535,7 @@ compare_owasp_benchmark java --tool sonarqube</pre>
     { id: "java", label: "Java" },
     { id: "python", label: "Python" }
   ];
-  var state = { language: "java", key: "score", direction: -1, kind: "all" };
+  var state = { language: "java", key: "score", direction: -1 };
 
   var hash = location.hash.replace("#", "");
   if (hash === "java" || hash === "python") state.language = hash;
@@ -528,7 +545,6 @@ compare_owasp_benchmark java --tool sonarqube</pre>
   var rowsEl = document.getElementById("rows");
   var metaEl = document.getElementById("meta");
   var chartEl = document.getElementById("chart");
-  var kindEl = document.getElementById("kind-filter");
 
   function rowsFor(language) {
     return (data[language] && data[language].rows) || [];
@@ -563,7 +579,6 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       tab.appendChild(el("span", { className: "count", text: String(rowsFor(language.id).length) }));
       tab.addEventListener("click", function () {
         state.language = language.id;
-        state.kind = "all";
         try { history.replaceState(null, "", "#" + language.id); } catch (error) { /* not allowed here */ }
         render();
       });
@@ -591,29 +606,8 @@ compare_owasp_benchmark java --tool sonarqube</pre>
     }
   }
 
-  function renderKinds() {
-    var kinds = ["all"];
-    rowsFor(state.language).forEach(function (row) {
-      if (kinds.indexOf(row.type) === -1) kinds.push(row.type);
-    });
-    kindEl.textContent = "";
-    kindEl.hidden = kinds.length <= 2;
-    kinds.forEach(function (kind) {
-      var button = el("button", {
-        type: "button",
-        "aria-pressed": String(state.kind === kind),
-        text: kind === "all" ? "All types" : kind
-      });
-      button.addEventListener("click", function () { state.kind = kind; render(); });
-      kindEl.appendChild(button);
-    });
-  }
-
   function visibleRows() {
-    var rows = rowsFor(state.language).filter(function (row) {
-      if (state.kind !== "all" && row.type !== state.kind) return false;
-      return true;
-    });
+    var rows = rowsFor(state.language).slice();
     rows.sort(function (a, b) {
       var x = a[state.key], y = b[state.key];
       if (typeof x === "string") return state.direction * x.localeCompare(y);
@@ -652,7 +646,7 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       else th.removeAttribute("aria-sort");
     });
     if (!rows.length) {
-      var cell = el("td", { colspan: "7", className: "empty" });
+      var cell = el("td", { colspan: "6", className: "empty" });
       cell.appendChild(document.createTextNode("No results for " + state.language + " yet. Run "));
       cell.appendChild(el("code", { text: "compare_owasp_benchmark " + state.language }));
       cell.appendChild(document.createTextNode(" to add them."));
@@ -675,7 +669,6 @@ compare_owasp_benchmark java --tool sonarqube</pre>
       }
       tr.appendChild(el("td", { className: "rank", text: String(ranked.indexOf(row) + 1) }));
       tr.appendChild(el("td", { className: "tool" }, [name]));
-      tr.appendChild(el("td", { className: "kind", text: row.type }));
       tr.appendChild(scoreCell(row.score));
       tr.appendChild(el("td", { className: "num", text: pct(row.tpr) }));
       tr.appendChild(el("td", { className: "num", text: pct(row.fpr) }));
@@ -729,7 +722,6 @@ compare_owasp_benchmark java --tool sonarqube</pre>
   function render() {
     renderTabs();
     renderMeta();
-    renderKinds();
     renderTable();
     renderChart();
   }

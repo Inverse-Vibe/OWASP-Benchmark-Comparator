@@ -10,11 +10,13 @@ names of OWASP Foundation projects.*
 
 ## Leaderboard
 
+**→ [inverse-vibe.github.io/OWASP-Benchmark-Comparator](https://inverse-vibe.github.io/OWASP-Benchmark-Comparator/)**
+
 [`leaderboard.html`](leaderboard.html) ranks every tool run here on each
 benchmark, and opens the full OWASP scorecard for a tool when you select it.
 OWASP publishes no official leaderboard; this one only puts results side by
-side. Open it straight from a clone, or through GitHub Pages (serve the root of
-`main`; `index.html` opens it). The scorecards it links live in
+side. The live page is served by GitHub Pages from the root of `main`; the same
+file opens straight from a clone. The scorecards it links live in
 [`scorecards/`](scorecards/), all by relative paths.
 
 ## Why you can trust the numbers
