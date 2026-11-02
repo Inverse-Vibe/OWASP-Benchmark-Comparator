@@ -82,7 +82,8 @@
   }
   .brand:hover { color: var(--ink); text-decoration: none; }
   .brand svg { width: 1.57em; height: 1.45em; display: block; flex: none; }
-  .brand .vibe { font: 700 1.5em/.8 "Caveat", cursive; letter-spacing: 0; margin-left: .45em; }
+  /* "Inverse" is tracked, so its last letter already carries a gap after it. */
+  .brand .vibe { font: 700 1.5em/.8 "Caveat", cursive; letter-spacing: 0; margin-left: .05em; color: var(--mark); }
   .eyebrow {
     font: 500 12px/1 var(--data);
     letter-spacing: .06em;
@@ -321,7 +322,188 @@ compare_owasp_benchmark java --tool sonarqube</pre>
 </div>
 
 <script id="leaderboard-data" type="application/json">
-{}
+{
+  "python": {
+    "title": "OWASP Benchmark for Python",
+    "repository": "BenchmarkPython",
+    "pin": "f1291485808b66e20ddb6b01b10dc71b3df8c8ba",
+    "updated": "2026-11-02",
+    "home": "scorecards/python/Scorecard_Home.html",
+    "rows": [
+      {
+        "tool": "SonarQube v26.10.0.133078",
+        "type": "SAST",
+        "tpr": 19.84,
+        "fpr": 0.0,
+        "score": 19.84,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_SonarQube_v26.10.0.133078.html"
+      },
+      {
+        "tool": "CodeQL v2.27.4",
+        "type": "SAST",
+        "tpr": 27.87,
+        "fpr": 15.53,
+        "score": 12.34,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_CodeQL_v2.27.4.html"
+      },
+      {
+        "tool": "Bearer v2.1.3",
+        "type": "SAST",
+        "tpr": 12.3,
+        "fpr": 1.39,
+        "score": 10.91,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_Bearer_v2.1.3.html"
+      },
+      {
+        "tool": "Precaution v0.8.6",
+        "type": "SAST",
+        "tpr": 12.3,
+        "fpr": 1.39,
+        "score": 10.91,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_Precaution_v0.8.6.html"
+      },
+      {
+        "tool": "Bandit v1.9.4",
+        "type": "SAST",
+        "tpr": 25.0,
+        "fpr": 15.67,
+        "score": 9.33,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_Bandit_v1.9.4.html"
+      },
+      {
+        "tool": "Semgrep OSS v1.182.1",
+        "type": "SAST",
+        "tpr": 25.82,
+        "fpr": 24.15,
+        "score": 1.67,
+        "scored": "2026-11-02",
+        "report": "scorecards/python/Benchmark_v0.1_Scorecard_for_Semgrep_OSS_v1.182.1.html"
+      }
+    ]
+  },
+  "java": {
+    "title": "OWASP Benchmark for Java",
+    "repository": "BenchmarkJava",
+    "pin": "20cbf3d11123347e47ed89541e6942836def53f7",
+    "updated": "2026-11-02",
+    "home": "scorecards/java/Scorecard_Home.html",
+    "rows": [
+      {
+        "tool": "CodeQL v2.27.4_w1.12.0rules",
+        "type": "SAST",
+        "tpr": 100.0,
+        "fpr": 37.99,
+        "score": 62.01,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_CodeQL_v2.27.4_w1.12.0rules.html"
+      },
+      {
+        "tool": "OpenTaint v0.4.6",
+        "type": "SAST",
+        "tpr": 100.0,
+        "fpr": 44.96,
+        "score": 55.04,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_OpenTaint_v0.4.6.html"
+      },
+      {
+        "tool": "Semgrep OSS v1.182.1",
+        "type": "SAST",
+        "tpr": 87.06,
+        "fpr": 42.09,
+        "score": 44.97,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_Semgrep_OSS_v1.182.1.html"
+      },
+      {
+        "tool": "SBwFindSecBugs v1.14.0",
+        "type": "SAST",
+        "tpr": 97.18,
+        "fpr": 53.44,
+        "score": 43.75,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_SBwFindSecBugs_v1.14.0.html"
+      },
+      {
+        "tool": "ShiftLeft Scan v2.0.4",
+        "type": "SAST",
+        "tpr": 90.94,
+        "fpr": 47.54,
+        "score": 43.4,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_ShiftLeft_Scan_v2.0.4.html"
+      },
+      {
+        "tool": "SonarQube v26.10.0.133078",
+        "type": "SAST",
+        "tpr": 42.64,
+        "fpr": 11.21,
+        "score": 31.43,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_SonarQube_v26.10.0.133078.html"
+      },
+      {
+        "tool": "Bearer v2.1.3",
+        "type": "SAST",
+        "tpr": 60.96,
+        "fpr": 29.86,
+        "score": 31.1,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_Bearer_v2.1.3.html"
+      },
+      {
+        "tool": "Precaution v0.8.6",
+        "type": "SAST",
+        "tpr": 22.15,
+        "fpr": 0.0,
+        "score": 22.15,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_Precaution_v0.8.6.html"
+      },
+      {
+        "tool": "Horusec v2.8.0",
+        "type": "SAST",
+        "tpr": 31.13,
+        "fpr": 23.13,
+        "score": 8.0,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_Horusec_v2.8.0.html"
+      },
+      {
+        "tool": "Insider v3.0.0",
+        "type": "SAST",
+        "tpr": 23.85,
+        "fpr": 23.29,
+        "score": 0.56,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_Insider_v3.0.0.html"
+      },
+      {
+        "tool": "PMD v7.17.0",
+        "type": "SAST",
+        "tpr": 0.0,
+        "fpr": 0.0,
+        "score": 0.0,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_PMD_v7.17.0.html"
+      },
+      {
+        "tool": "SpotBugs v4.10.4",
+        "type": "SAST",
+        "tpr": 5.12,
+        "fpr": 5.19,
+        "score": -0.07,
+        "scored": "2026-11-02",
+        "report": "scorecards/java/Benchmark_v1.2_Scorecard_for_SpotBugs_v4.10.4.html"
+      }
+    ]
+  }
+}
 </script>
 <script>
 (function () {
