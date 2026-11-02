@@ -106,6 +106,8 @@ def compare(args: argparse.Namespace) -> int:
         if path.is_file() and path.name not in KEEP:
             path.unlink()
 
+    store = work / benchmark.id / "results"
+    store.mkdir(parents=True, exist_ok=True)
     failed = 0
     carried: list[str] = []
     for tool in tools:
@@ -151,18 +153,27 @@ def compare(args: argparse.Namespace) -> int:
             print(f"[{tool.id}] FAILED: wrote nothing to results/ - see {log}", file=sys.stderr)
             failed += 1
             continue
+        # Kept per tool between runs, replacing that tool's previous results: a
+        # run of one tool is scored beside the latest of every other.
+        kept = store / tool.id
+        if kept.exists():
+            shutil.rmtree(kept)
+        kept.mkdir(parents=True)
         for name in written:
-            shutil.copy2(own / "results" / name, clone / "results" / name)
+            shutil.copy2(own / "results" / name, kept / name)
             carried.append(name)
 
-    if not carried:
-        raise RunError("no tool wrote a results file - nothing to score")
+    for kept in sorted(path for path in store.iterdir() if path.is_dir()):
+        for result in kept.iterdir():
+            shutil.copy2(result, clone / "results" / result.name)
+    if not any(path.name not in KEEP for path in (clone / "results").iterdir()):
+        raise RunError("no tool has written a results file - nothing to score")
     print("[scorecard] createScorecards.sh ...", flush=True)
     rows = scorecard(clone, env, bash, work / benchmark.id / "logs" / "scorecard.log")
 
     print()
     print(render(benchmark.title, rows))
-    print(f"\n  results from this run: {', '.join(sorted(carried))}")
+    print(f"\n  results from this run: {', '.join(sorted(carried)) or 'none'}")
     print(f"  scorecard: {clone / 'scorecard' / 'Scorecard_Home.html'}")
     if not args.no_leaderboard:
         leaderboard.update(PAGE, benchmark, pin, rows, clone / "scorecard")
