@@ -5,8 +5,8 @@
 #
 # Those scripts call CodeQL at a path relative to the benchmark checkout
 # (BenchmarkJava: ../../tools/codeql-home/codeql, BenchmarkPython:
-# ../tools/codeql-home/codeql). This puts the CodeQL bundle there - downloaded
-# once into TOOL_CACHE - and runs them.
+# ../tools/codeql-home/codeql), so the CodeQL bundle - downloaded once into
+# TOOL_CACHE - is put there first.
 
 set -euo pipefail
 : "${BENCHMARK_LANGUAGE:?}" "${TOOL_CACHE:?}"
@@ -29,8 +29,12 @@ case "$BENCHMARK_LANGUAGE" in
     exit 1
     ;;
 esac
+# A hard-linked copy, not a symlink: reached through a symlink by that relative
+# path, CodeQL cannot find its own extractors ("no CodeQL extractor named
+# 'python'"). Hard links cost no space.
 mkdir -p "$home"
-ln -sfn "$bundle" "$home/codeql"
+rm -rf "$home/codeql"
+cp -al "$bundle" "$home/codeql"
 
 bash scripts/translateCodeQL.sh
 bash scripts/runCodeQL.sh

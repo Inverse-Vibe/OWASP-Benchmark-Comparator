@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html.parser import HTMLParser
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +71,10 @@ def leaderboard(html: str) -> list[Row]:
         ]
         return sorted(rows, key=lambda row: row.value, reverse=True)
     return []
+
+
+def read(home: Path) -> list[Row]:
+    return leaderboard(home.read_text(encoding="utf-8"))
 
 
 def render(title: str, rows: list[Row]) -> str:

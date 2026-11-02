@@ -14,9 +14,11 @@ fi
 export PATH="$TOOL_CACHE/venv/bin:$PATH"
 precli --version
 
+# precli exits 1 whenever it finds anything; whether a results file was written
+# decides.
 case "$BENCHMARK_LANGUAGE" in
-  java) bash scripts/runPrecaution.sh ;;
-  python) precli -r . --json -o "results/${BENCHMARK_RESULTS_PREFIX}Precaution.json" ;;
+  java) bash scripts/runPrecaution.sh || true ;;
+  python) precli -r . --json -o "results/${BENCHMARK_RESULTS_PREFIX}Precaution.json" || true ;;
   *)
     echo "no Precaution setup for $BENCHMARK_LANGUAGE" >&2
     exit 1

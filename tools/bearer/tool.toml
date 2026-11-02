@@ -1,5 +1,5 @@
 name = "Bearer"
 
-# The benchmark's own script, unchanged.
-java = "scripts/runBearer.sh"
-python = "scripts/runBearer.sh"
+# The benchmark's own scripts/runBearer.sh, with results/ writable by Bearer's image.
+java = "./run.sh"
+python = "./run.sh"

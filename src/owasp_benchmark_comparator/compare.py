@@ -17,20 +17,26 @@ PATH (or --java-home / --maven-home), plus whatever each tool script needs.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-from owasp_benchmark_comparator import __version__
+from owasp_benchmark_comparator import __version__, leaderboard
 from owasp_benchmark_comparator.benchmarks import (
     BENCHMARKS,
     ROOT,
+    Benchmark,
     Environment,
     RunError,
     fresh_clone,
     install_scorer,
     load_tools,
+    pinned,
 )
-from owasp_benchmark_comparator.scorecard import leaderboard, render
+from owasp_benchmark_comparator.scorecard import Row, read, render
+
+#: The comparison page; its data block is rewritten after every run.
+PAGE = ROOT / "leaderboard.html"
 
 
 def snapshot(results: Path) -> dict[str, tuple[int, int]]:
@@ -58,7 +64,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--java-home", help="the JDK for Maven (default: JAVA_HOME)")
     parser.add_argument("--maven-home", help="the Maven to use (default: mvn on PATH)")
     parser.add_argument("--work", type=Path, help="where clones and logs go (default: work/)")
+    parser.add_argument(
+        "--no-leaderboard", action="store_true", help="do not update leaderboard.html"
+    )
     return parser
+
+
+def scorecard(clone: Path, env: Environment, bash: str, log: Path) -> list[Row]:
+    """Run the benchmark's own createScorecards.sh and read the leaderboard it writes."""
+    env.run([bash, "createScorecards.sh"], clone, log)
+    home = clone / "scorecard" / "Scorecard_Home.html"
+    if not home.exists():
+        raise RunError(f"createScorecards.sh wrote no {home}")
+    return read(home)
+
+
+def reference_tools(
+    benchmark: Benchmark, clone: Path, work: Path, env: Environment, bash: str, pin: str
+) -> set[str]:
+    """The rows OWASP's shipped results make on their own, scored once per pin -
+    so the page can tell OWASP's reference results from tools run here."""
+    cache = work / benchmark.id / f"reference-{pin[:12]}.json"
+    if cache.exists():
+        return set(json.loads(cache.read_text(encoding="utf-8")))
+    print("[reference] scoring the results OWASP ships ...", flush=True)
+    rows = scorecard(clone, env, bash, work / benchmark.id / "logs" / "reference.log")
+    names = sorted(row.tool for row in rows)
+    cache.write_text(json.dumps(names, indent=1), encoding="utf-8")
+    return set(names)
 
 
 def compare(args: argparse.Namespace) -> int:
@@ -78,7 +111,9 @@ def compare(args: argparse.Namespace) -> int:
 
     print(f"[scorer] installing {install_scorer(work, env)[:12]} ...", flush=True)
     clone = work / benchmark.id / benchmark.directory
+    pin = pinned(ROOT / benchmark.directory, env)
     fresh_clone(ROOT / benchmark.directory, clone, env)
+    reference = reference_tools(benchmark, clone, work, env, bash, pin)
     shipped = snapshot(clone / "results")
 
     failed = 0
@@ -115,16 +150,16 @@ def compare(args: argparse.Namespace) -> int:
             failed += 1
 
     print("[scorecard] createScorecards.sh ...", flush=True)
-    env.run([bash, "createScorecards.sh"], clone, work / benchmark.id / "logs" / "scorecard.log")
-    home = clone / "scorecard" / "Scorecard_Home.html"
-    if not home.exists():
-        raise RunError(f"createScorecards.sh wrote no {home}")
+    rows = scorecard(clone, env, bash, work / benchmark.id / "logs" / "scorecard.log")
 
     print()
-    print(render(benchmark.title, leaderboard(home.read_text(encoding="utf-8"))))
-    added = sorted(path.name for path in (clone / "results").iterdir() if path.name not in shipped)
-    print(f"\n  results from this run: {', '.join(added) or 'none'}")
-    print(f"  scorecard: {home}")
+    print(render(benchmark.title, rows))
+    written = changed(shipped, snapshot(clone / "results"))
+    print(f"\n  results from this run: {', '.join(written) or 'none'}")
+    print(f"  scorecard: {clone / 'scorecard' / 'Scorecard_Home.html'}")
+    if not args.no_leaderboard:
+        leaderboard.update(PAGE, benchmark, pin, rows, reference, clone / "scorecard")
+        print(f"  leaderboard: {PAGE}")
     return 1 if failed else 0
 
 

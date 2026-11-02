@@ -1,5 +1,6 @@
 name = "Horusec"
 
-# No benchmark ships a Horusec script.
+# No benchmark ships a Horusec script. Java only: without Docker-in-Docker,
+# Horusec's own engine has no Python analyser (for Python it runs Bandit and
+# Semgrep, which are compared on their own).
 java = "./run.sh"
-python = "./run.sh"

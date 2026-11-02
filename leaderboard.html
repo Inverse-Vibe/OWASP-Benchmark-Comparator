@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>OWASP Benchmark Comparison</title>
+<meta name="description" content="A comparison leaderboard of security tools on the OWASP Benchmark, scored by OWASP's own BenchmarkUtils. Not an official OWASP leaderboard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  /* Inverse's dark /home: the near-black ground, flat cards drawn by one hairline,
+     the brand blue for what was run here, grey for OWASP's own reference results.
+     Layout: one column - title, notice, benchmark tabs, the ranked list, the
+     TPR/FPR chart, then how the numbers are made. Dark only. */
+  :root {
+    --bg: #080808;
+    --card: #0d0d0e;
+    --raised: #121214;
+    --ink: #f4f4f5;
+    --ink-soft: #d4d4d8;
+    --muted: #a1a1aa;
+    --muted-2: #8b8b94;
+    --line: #27272a;
+    --line-strong: #5f5f69;
+    --accent: #4ba7f5;
+    --accent-hover: #8cc7f8;
+    --ok: #7bb926;
+    --bad: #fe4c58;
+    --reference: #a1a1aa;
+    /* Names the chart script uses. */
+    --surface: var(--card);
+    --rule: var(--line);
+    --guess: var(--line-strong);
+
+    --display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+    --ui: "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    --data: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 14px/1.55 var(--ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 20px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-hover); text-decoration: underline; }
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  header { display: grid; gap: 8px; }
+  .eyebrow {
+    font: 500 12px/1 var(--data);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+  }
+  h1 {
+    margin: 0;
+    font: 600 clamp(28px, 4.4vw, 38px)/1.1 var(--display);
+    letter-spacing: -.02em;
+    text-wrap: balance;
+  }
+  .lede { margin: 0; max-width: 68ch; color: var(--muted); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+  .notice {
+    padding: 16px 20px;
+    display: grid;
+    gap: 6px;
+    max-width: 86ch;
+  }
+  .notice strong { font: 600 15px/1.3 var(--display); color: var(--ink); }
+  .notice p { margin: 0; color: var(--muted); }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tab {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font: 600 14px/1 var(--ui);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--ink); background: var(--raised); }
+  .tab[aria-selected="true"] {
+    color: var(--ink);
+    border-color: var(--line-strong);
+    background: var(--raised);
+  }
+  .tab .count {
+    font: 500 12px/1 var(--data);
+    color: var(--muted-2);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    font: 400 13px/1.4 var(--data);
+    color: var(--muted-2);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--muted); font-size: 13px; }
+  .controls label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+  .controls input { accent-color: var(--accent); }
+  .segmented { display: inline-flex; gap: 4px; }
+  .segmented button {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font: 500 12px/1 var(--ui);
+    cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { color: var(--ink); border-color: var(--line-strong); background: var(--raised); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 12px 16px; text-align: left; white-space: nowrap; }
+  thead th {
+    font: 500 12px/1 var(--ui);
+    color: var(--muted-2);
+    border-bottom: 1px solid var(--line);
+  }
+  thead th button {
+    appearance: none; border: 0; background: none; padding: 0;
+    font: inherit; color: inherit; cursor: pointer;
+  }
+  thead th button:hover { color: var(--ink); }
+  thead th[aria-sort] button { color: var(--ink); }
+  thead th[aria-sort="descending"] button::after { content: " \2193"; color: var(--accent); }
+  thead th[aria-sort="ascending"] button::after { content: " \2191"; color: var(--accent); }
+  tbody tr + tr { border-top: 1px solid var(--line); }
+  tbody tr.linked { cursor: pointer; }
+  tbody tr.linked:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  td.num, th.num { text-align: right; font: 400 13px/1 var(--data); color: var(--ink-soft); }
+  td.rank { font: 500 13px/1 var(--data); color: var(--muted-2); width: 1%; }
+  td.tool { font-weight: 600; color: var(--ink); }
+  td.tool a { color: var(--ink); }
+  td.tool a:hover { color: var(--accent); }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font: 600 12px/1 var(--ui);
+  }
+  .chip.run { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .chip.reference { color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+  .kind { font: 400 13px/1 var(--data); color: var(--muted); }
+
+  .score { display: grid; grid-template-columns: 64px minmax(96px, 1fr); gap: 12px; align-items: center; min-width: 200px; }
+  .score .value { text-align: right; font: 500 14px/1 var(--data); color: var(--ink); }
+  .track { position: relative; height: 6px; border-radius: 999px; background: var(--raised); }
+  .track .zero { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--line-strong); }
+  .track .fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+  .track .fill.negative { background: var(--bad); }
+
+  .empty { padding: 32px 18px; color: var(--muted); white-space: normal; }
+  .empty code { font-family: var(--data); color: var(--ink); }
+
+  .chart-block { display: grid; gap: 12px; padding: 20px; }
+  .chart-block h2, .method h2 {
+    margin: 0;
+    font: 600 18px/1.3 var(--display);
+    letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .chart-block p { margin: 0; color: var(--muted); max-width: 68ch; }
+  .chart { max-width: 620px; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart text { font-family: var(--data); font-size: 11px; fill: var(--muted-2); }
+  .chart .axis-title { fill: var(--muted); font-size: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; gap: 8px; align-items: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .method { display: grid; gap: 12px; padding: 20px; }
+  .method p, .method li { margin: 0; max-width: 78ch; color: var(--muted); }
+  .method li b { color: var(--ink-soft); font-weight: 600; }
+  .method ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+  .method code { font: 400 12px/1 var(--data); color: var(--ink-soft); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+  pre.cmd {
+    margin: 0;
+    overflow-x: auto;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--ink-soft);
+    font: 400 13px/1.6 var(--data);
+  }
+  footer { font-size: 12px; color: var(--muted-2); padding-top: 4px; }
+
+  @media (max-width: 560px) {
+    th, td { padding: 10px 10px; }
+    .chart-block, .method { padding: 16px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    tbody tr.linked, .tab, .segmented button { transition: background-color .12s ease, color .12s ease; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">Comparison leaderboard</div>
+    <h1>OWASP Benchmark Comparison</h1>
+    <p class="lede">Security tools run against the same OWASP Benchmark test suites and scored by the same OWASP scorer, so their results can be compared side by side. Select a tool to open the full OWASP scorecard for it.</p>
+  </header>
+
+  <aside class="notice card" aria-label="Notice">
+    <strong>Not an official OWASP leaderboard</strong>
+    <p>We do not own OWASP, the OWASP Benchmark or BenchmarkUtils, and this page is not affiliated with or endorsed by the OWASP Foundation. OWASP publishes no official leaderboard, so this page collects results in one place to help people compare tools on the same dataset and the same evaluation. Every score here is copied from a scorecard produced by OWASP's own BenchmarkUtils, run on OWASP's unmodified benchmark repositories.</p>
+  </aside>
+
+  <section aria-label="Results">
+    <div class="tabs" role="tablist" id="tabs"></div>
+  </section>
+
+  <div class="meta" id="meta"></div>
+
+  <div class="controls">
+    <label for="show-reference"><input type="checkbox" id="show-reference" checked> Show OWASP reference results</label>
+    <div class="segmented" role="group" aria-label="Tool type" id="kind-filter"></div>
+  </div>
+
+  <div class="table-wrap card">
+    <table id="board">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col" data-key="tool"><button type="button">Tool</button></th>
+          <th scope="col" data-key="type"><button type="button">Type</button></th>
+          <th scope="col" data-key="source"><button type="button">Source</button></th>
+          <th scope="col" data-key="score" aria-sort="descending"><button type="button">Score</button></th>
+          <th scope="col" class="num" data-key="tpr"><button type="button">TPR</button></th>
+          <th scope="col" class="num" data-key="fpr"><button type="button">FPR</button></th>
+          <th scope="col" data-key="scored"><button type="button">Scored</button></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <section class="chart-block card" aria-labelledby="chart-title">
+    <h2 id="chart-title">True positives against false positives</h2>
+    <p>The same view the OWASP scorecard draws. Each point is one tool. The dashed diagonal is random guessing; the further a tool sits above it, toward the top left, the better.</p>
+    <div class="chart" id="chart"></div>
+    <div class="legend">
+      <span><i class="dot" style="background: var(--accent)"></i> Run by this project</span>
+      <span><i class="dot" style="background: var(--reference)"></i> OWASP reference result</span>
+    </div>
+  </section>
+
+  <section class="method card" aria-labelledby="method-title">
+    <h2 id="method-title">How the numbers are made</h2>
+    <ul>
+      <li><b>Dataset.</b> OWASP's own <a href="https://github.com/OWASP-Benchmark/BenchmarkJava">BenchmarkJava</a> (2,740 test cases) and <a href="https://github.com/OWASP-Benchmark/BenchmarkPython">BenchmarkPython</a> (1,230), pinned to one commit each and never edited. Each test case is either really vulnerable or a deliberate false alarm.</li>
+      <li><b>Evaluation.</b> OWASP's <a href="https://github.com/OWASP-Benchmark/BenchmarkUtils">BenchmarkUtils</a> reads each tool's own report and writes the scorecard, through each benchmark's own <code>createScorecards.sh</code>. Nothing in this project maps findings or computes scores.</li>
+      <li><b>Score.</b> True-positive rate minus false-positive rate (the Youden index), averaged over the vulnerability categories, so each category counts equally whatever its size. 0% is what random guessing scores; a negative score is worse than guessing.</li>
+      <li><b>Sources.</b> <span class="chip reference">OWASP reference</span> rows come from the results OWASP ships inside each benchmark repository. <span class="chip run">Run here</span> rows are tools this project ran on the same pinned benchmark.</li>
+    </ul>
+    <p>Reproduce any row:</p>
+    <pre class="cmd">git clone --recurse-submodules https://github.com/Inverse-Vibe/OWASP-Benchmark-Comparator.git
+cd OWASP-Benchmark-Comparator &amp;&amp; pip install -e .
+compare_owasp_benchmark java --tool sonarqube</pre>
+  </section>
+
+  <footer>
+    OWASP, OWASP Benchmark and BenchmarkUtils are projects of the OWASP Foundation. Tool names are trademarks of their owners. Results reflect each tool's default configuration at the version shown.
+  </footer>
+</div>
+
+<script id="leaderboard-data" type="application/json">
+{}
+</script>
+<script>
+(function () {
+  "use strict";
+  var data = {};
+  try {
+    data = JSON.parse(document.getElementById("leaderboard-data").textContent || "{}");
+  } catch (error) {
+    data = {};
+  }
+  var languages = [
+    { id: "java", label: "Java" },
+    { id: "python", label: "Python" }
+  ];
+  var state = { language: "java", key: "score", direction: -1, reference: true, kind: "all" };
+
+  var hash = location.hash.replace("#", "");
+  if (hash === "java" || hash === "python") state.language = hash;
+
+  var tabs = document.getElementById("tabs");
+  var rowsEl = document.getElementById("rows");
+  var metaEl = document.getElementById("meta");
+  var chartEl = document.getElementById("chart");
+  var kindEl = document.getElementById("kind-filter");
+  var referenceBox = document.getElementById("show-reference");
+
+  function rowsFor(language) {
+    return (data[language] && data[language].rows) || [];
+  }
+
+  function pct(value) {
+    return value.toFixed(2) + "%";
+  }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (key) {
+      if (key === "text") node.textContent = props[key];
+      else if (key === "className") node.className = props[key];
+      else node.setAttribute(key, props[key]);
+    });
+    (children || []).forEach(function (child) { if (child) node.appendChild(child); });
+    return node;
+  }
+
+  function renderTabs() {
+    tabs.textContent = "";
+    languages.forEach(function (language) {
+      var tab = el("button", {
+        type: "button",
+        role: "tab",
+        className: "tab",
+        id: "tab-" + language.id,
+        "aria-selected": String(state.language === language.id)
+      });
+      tab.appendChild(document.createTextNode(language.label));
+      tab.appendChild(el("span", { className: "count", text: String(rowsFor(language.id).length) }));
+      tab.addEventListener("click", function () {
+        state.language = language.id;
+        state.kind = "all";
+        try { history.replaceState(null, "", "#" + language.id); } catch (error) { /* not allowed here */ }
+        render();
+      });
+      tabs.appendChild(tab);
+    });
+  }
+
+  function renderMeta() {
+    var entry = data[state.language];
+    metaEl.textContent = "";
+    if (!entry) return;
+    var items = [
+      ["Benchmark", entry.title],
+      ["Repository", entry.repository + " @ " + String(entry.pin || "").slice(0, 7)],
+      ["Last run", entry.updated]
+    ];
+    items.forEach(function (item) {
+      var span = el("span", {}, [document.createTextNode(item[0] + " ")]);
+      span.appendChild(el("b", { text: item[1] }));
+      metaEl.appendChild(span);
+    });
+    if (entry.home) {
+      var link = el("a", { href: entry.home, target: "_blank", rel: "noopener", text: "Full OWASP scorecard (latest run)" });
+      metaEl.appendChild(link);
+    }
+  }
+
+  function renderKinds() {
+    var kinds = ["all"];
+    rowsFor(state.language).forEach(function (row) {
+      if (kinds.indexOf(row.type) === -1) kinds.push(row.type);
+    });
+    kindEl.textContent = "";
+    kindEl.hidden = kinds.length <= 2;
+    kinds.forEach(function (kind) {
+      var button = el("button", {
+        type: "button",
+        "aria-pressed": String(state.kind === kind),
+        text: kind === "all" ? "All types" : kind
+      });
+      button.addEventListener("click", function () { state.kind = kind; render(); });
+      kindEl.appendChild(button);
+    });
+  }
+
+  function visibleRows() {
+    var rows = rowsFor(state.language).filter(function (row) {
+      if (!state.reference && row.source === "reference") return false;
+      if (state.kind !== "all" && row.type !== state.kind) return false;
+      return true;
+    });
+    rows.sort(function (a, b) {
+      var x = a[state.key], y = b[state.key];
+      if (typeof x === "string") return state.direction * x.localeCompare(y);
+      return state.direction * (x - y);
+    });
+    return rows;
+  }
+
+  function scoreCell(score) {
+    var cell = el("td", {});
+    var wrap = el("div", { className: "score" });
+    wrap.appendChild(el("span", { className: "value", text: pct(score) }));
+    // The track runs from -25% to 100%: wide enough for every published score,
+    // with zero (random guessing) marked.
+    var min = -25, max = 100, span = max - min;
+    var zero = (0 - min) / span * 100;
+    var clamped = Math.max(min, Math.min(max, score));
+    var track = el("div", { className: "track", "aria-hidden": "true" });
+    track.appendChild(el("div", { className: "zero", style: "left:" + zero + "%" }));
+    var start = Math.min(zero, (clamped - min) / span * 100);
+    var width = Math.abs((clamped - min) / span * 100 - zero);
+    track.appendChild(el("div", {
+      className: "fill" + (score < 0 ? " negative" : ""),
+      style: "left:" + start + "%;width:" + width + "%"
+    }));
+    wrap.appendChild(track);
+    cell.appendChild(wrap);
+    return cell;
+  }
+
+  function renderTable() {
+    var rows = visibleRows();
+    rowsEl.textContent = "";
+    document.querySelectorAll("#board thead th[data-key]").forEach(function (th) {
+      if (th.dataset.key === state.key) th.setAttribute("aria-sort", state.direction < 0 ? "descending" : "ascending");
+      else th.removeAttribute("aria-sort");
+    });
+    if (!rows.length) {
+      var cell = el("td", { colspan: "8", className: "empty" });
+      cell.appendChild(document.createTextNode("No results for " + state.language + " yet. Run "));
+      cell.appendChild(el("code", { text: "compare_owasp_benchmark " + state.language }));
+      cell.appendChild(document.createTextNode(" to add them."));
+      rowsEl.appendChild(el("tr", {}, [cell]));
+      return;
+    }
+    var ranked = rowsFor(state.language).slice().sort(function (a, b) { return b.score - a.score; });
+    rows.forEach(function (row) {
+      var tr = el("tr", {});
+      var name = row.report
+        ? el("a", { href: row.report, target: "_blank", rel: "noopener", text: row.tool })
+        : document.createTextNode(row.tool);
+      if (row.report) {
+        tr.className = "linked";
+        tr.title = "Open the OWASP scorecard for " + row.tool;
+        tr.addEventListener("click", function (event) {
+          if (event.target.closest("a")) return;
+          name.click();
+        });
+      }
+      tr.appendChild(el("td", { className: "rank", text: String(ranked.indexOf(row) + 1) }));
+      tr.appendChild(el("td", { className: "tool" }, [name]));
+      tr.appendChild(el("td", { className: "kind", text: row.type }));
+      tr.appendChild(el("td", {}, [el("span", {
+        className: "chip " + row.source,
+        text: row.source === "reference" ? "OWASP reference" : "Run here"
+      })]));
+      tr.appendChild(scoreCell(row.score));
+      tr.appendChild(el("td", { className: "num", text: pct(row.tpr) }));
+      tr.appendChild(el("td", { className: "num", text: pct(row.fpr) }));
+      tr.appendChild(el("td", { className: "kind", text: row.scored || "" }));
+      rowsEl.appendChild(tr);
+    });
+  }
+
+  function renderChart() {
+    var rows = visibleRows();
+    var ranked = rowsFor(state.language).slice().sort(function (a, b) { return b.score - a.score; });
+    var size = 420, pad = { left: 52, right: 16, top: 16, bottom: 44 };
+    var plot = size - pad.left - pad.right;
+    var height = plot + pad.top + pad.bottom;
+    function x(v) { return pad.left + v / 100 * plot; }
+    function y(v) { return pad.top + plot - v / 100 * plot; }
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 " + size + " " + height);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "True-positive rate against false-positive rate for each tool");
+    function add(tag, attrs, text) {
+      var node = document.createElementNS(ns, tag);
+      Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+      if (text != null) node.textContent = text;
+      svg.appendChild(node);
+      return node;
+    }
+    [0, 25, 50, 75, 100].forEach(function (tick) {
+      add("line", { x1: x(tick), x2: x(tick), y1: y(0), y2: y(100), stroke: "var(--rule)", "stroke-width": 1 });
+      add("line", { x1: x(0), x2: x(100), y1: y(tick), y2: y(tick), stroke: "var(--rule)", "stroke-width": 1 });
+      add("text", { x: x(tick), y: y(0) + 16, "text-anchor": "middle" }, tick + "%");
+      add("text", { x: x(0) - 8, y: y(tick) + 4, "text-anchor": "end" }, tick + "%");
+    });
+    add("line", { x1: x(0), y1: y(0), x2: x(100), y2: y(100), stroke: "var(--guess)", "stroke-width": 1.5, "stroke-dasharray": "5 4", fill: "none" });
+    add("text", { x: x(72), y: y(64), "text-anchor": "middle", transform: "rotate(-45 " + x(72) + " " + y(64) + ")" }, "random guessing");
+    add("text", { x: x(50), y: height - 6, "text-anchor": "middle", "class": "axis-title" }, "False-positive rate");
+    add("text", { x: 14, y: y(50), "text-anchor": "middle", "class": "axis-title", transform: "rotate(-90 14 " + y(50) + ")" }, "True-positive rate");
+    rows.forEach(function (row) {
+      var color = row.source === "reference" ? "var(--reference)" : "var(--accent)";
+      var dot = add("circle", { cx: x(row.fpr), cy: y(row.tpr), r: 5.5, fill: color, stroke: "var(--surface)", "stroke-width": 1.5 });
+      var title = document.createElementNS(ns, "title");
+      title.textContent = row.tool + ": TPR " + pct(row.tpr) + ", FPR " + pct(row.fpr) + ", score " + pct(row.score);
+      dot.appendChild(title);
+      add("text", { x: x(row.fpr) + 8, y: y(row.tpr) - 6, fill: "var(--ink)" }, String(ranked.indexOf(row) + 1));
+    });
+    chartEl.textContent = "";
+    chartEl.appendChild(svg);
+  }
+
+  function render() {
+    renderTabs();
+    renderMeta();
+    renderKinds();
+    renderTable();
+    renderChart();
+  }
+
+  document.querySelectorAll("#board thead th[data-key] button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var key = button.parentElement.dataset.key;
+      if (state.key === key) state.direction = -state.direction;
+      else {
+        state.key = key;
+        state.direction = key === "tool" || key === "type" || key === "source" ? 1 : -1;
+      }
+      renderTable();
+    });
+  });
+  referenceBox.addEventListener("change", function () {
+    state.reference = referenceBox.checked;
+    renderTable();
+    renderChart();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

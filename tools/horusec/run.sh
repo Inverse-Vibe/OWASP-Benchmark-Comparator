@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# Horusec CLI on the benchmark in the current directory, writing the JSON report
-# that BenchmarkUtils' HorusecReader reads. Its own engine only (-D): the
-# alternative is Horusec starting further containers from inside its own.
+# Horusec CLI on BenchmarkJava, writing the JSON report BenchmarkUtils'
+# HorusecReader reads. Its own engine only (-D): otherwise Horusec starts further
+# containers from inside its own. Its engine opens every file at once, so the
+# container's open-file limit is raised - at the default it stops partway with
+# "too many open files" and reports a handful of findings.
 
 set -euo pipefail
 : "${BENCHMARK_RESULTS_PREFIX:?}"
 
-image="horuszup/horusec-cli:latest"
+image="horuszup/horusec-cli:v2.8.0"
 docker pull -q "$image" > /dev/null
-version=$(docker run --rm "$image" horusec version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "${PWD}:/src" -w /src "$image" \
-  horusec start -p /src -D -o json \
-  -O "/src/results/${BENCHMARK_RESULTS_PREFIX}horusec-v${version:-unknown}.json" \
+result="results/${BENCHMARK_RESULTS_PREFIX}horusec-v2.8.0.json"
+docker run --rm --ulimit nofile=65536:65536 --user "$(id -u):$(id -g)" -e HOME=/tmp \
+  -v "${PWD}:/src" -w /src "$image" \
+  horusec start -p /src -D -o json -O "/src/$result" \
   -i "**/results/**,**/scorecard/**,**/scripts/**,**/tools/**,**/VMs/**" \
-  --information-severity=true || true
-# Horusec exits non-zero whenever it finds anything; the report decides.
-test -s "results/${BENCHMARK_RESULTS_PREFIX}horusec-v${version:-unknown}.json"
+  --information-severity=true --analysis-timeout 3600
+test -s "$result"
