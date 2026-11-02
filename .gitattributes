@@ -1,0 +1,2 @@
+# Tool scripts run under bash on Linux; a CRLF checkout breaks them.
+*.sh text eol=lf

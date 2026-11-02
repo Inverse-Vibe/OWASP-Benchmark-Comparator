@@ -52,17 +52,32 @@ def test_the_glossary_table_is_not_mistaken_for_tools() -> None:
     assert all("Positive" not in row.tool for row in leaderboard(HOME))
 
 
-def test_every_tool_script_is_one_its_benchmark_ships() -> None:
-    """A tool is only ever an OWASP script - never something of ours."""
+def test_every_tool_is_a_folder_holding_what_it_runs() -> None:
     tools = load_tools()
-    assert tools
+    assert "sonarqube" in {tool.id for tool in tools}
     for tool in tools:
-        assert tool.scripts
+        assert tool.scripts, f"{tool.id} runs on no benchmark"
         for language, script in tool.scripts.items():
-            directory = ROOT / BENCHMARKS[language].directory
-            if not _checked_out(BENCHMARKS[language].directory):
-                pytest.skip(f"{directory.name} not checked out")
-            assert (directory / script).is_file(), f"{tool.id}: {script} not in {directory.name}"
+            if script.startswith("./"):
+                assert tool.script(language, ROOT).is_file(), f"{tool.id}: {script} missing"
+            else:
+                directory = BENCHMARKS[language].directory
+                if not _checked_out(directory):
+                    pytest.skip(f"{directory} not checked out")
+                assert (ROOT / directory / script).is_file(), f"{tool.id}: no {script}"
+
+
+def test_a_script_is_found_in_the_tool_folder_or_the_benchmark(tmp_path: Path) -> None:
+    folder = tmp_path / "tools" / "x"
+    folder.mkdir(parents=True)
+    (folder / "tool.toml").write_text(
+        'name = "X"\njava = "./run.sh"\npython = "scripts/runX.sh"\n', encoding="utf-8"
+    )
+    (tool,) = load_tools(tmp_path / "tools")
+    clone = tmp_path / "clone"
+    assert (tool.id, tool.name) == ("x", "X")
+    assert tool.script("java", clone) == folder / "run.sh"
+    assert tool.script("python", clone) == clone / "scripts" / "runX.sh"
 
 
 @pytest.mark.parametrize("name", [b.directory for b in BENCHMARKS.values()] + [SCORER])

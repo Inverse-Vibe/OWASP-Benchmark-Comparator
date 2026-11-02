@@ -1,0 +1,7 @@
+name = "SonarQube"
+
+# Language = the script that runs the tool. "./" is in this folder; anything else
+# is a script the benchmark repository ships. Either way it runs from the root of
+# a fresh clone of the benchmark and leaves its results file in results/.
+java = "./run.sh"
+python = "./run.sh"

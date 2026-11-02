@@ -13,12 +13,13 @@ import shutil
 import subprocess
 import tomllib
 from dataclasses import dataclass
-from importlib import resources
 from pathlib import Path
 from typing import Final
 
 #: The repository root: src/owasp_benchmark_comparator/ -> src/ -> root.
 ROOT: Final[Path] = Path(__file__).resolve().parents[2]
+#: One folder per tool, holding everything that tool needs.
+TOOLS: Final[Path] = ROOT / "tools"
 SCORER: Final[str] = "BenchmarkUtils"
 PLUGIN: Final[str] = "org.owasp:benchmarkutils-maven-plugin"
 
@@ -33,31 +34,49 @@ class Benchmark:
     title: str
     #: The submodule, at the repository root.
     directory: str
+    #: How OWASP names a results file for this benchmark.
+    results_prefix: str
 
 
 BENCHMARKS: Final[dict[str, Benchmark]] = {
-    "java": Benchmark("java", "OWASP Benchmark for Java", "BenchmarkJava"),
-    "python": Benchmark("python", "OWASP Benchmark for Python", "BenchmarkPython"),
+    "java": Benchmark("java", "OWASP Benchmark for Java", "BenchmarkJava", "Benchmark_1.2-"),
+    "python": Benchmark(
+        "python", "OWASP Benchmark for Python", "BenchmarkPython", "BenchmarkPython-"
+    ),
 }
 
 
 @dataclass(frozen=True, slots=True)
 class Tool:
+    """A folder under tools/: its `tool.toml` and everything its scripts use."""
+
     id: str
     name: str
-    #: Language -> the script, inside that benchmark's repository, that runs it.
+    directory: Path
+    #: Language -> the script that runs it: `./x` in the tool's folder, anything
+    #: else a script the benchmark repository ships.
     scripts: dict[str, str]
 
+    def script(self, language: str, clone: Path) -> Path:
+        script = self.scripts[language]
+        if script.startswith("./"):
+            return self.directory / script[2:]
+        return clone / script
 
-def load_tools() -> list[Tool]:
-    data = tomllib.loads(
-        resources.files(__package__).joinpath("tools.toml").read_text(encoding="utf-8")
-    )
+
+def load_tools(root: Path = TOOLS) -> list[Tool]:
     tools = []
-    for tool_id, entry in data.items():
-        scripts = {key: value for key, value in entry.items() if key in BENCHMARKS}
-        tools.append(Tool(id=tool_id, name=entry.get("name", tool_id), scripts=scripts))
-    return sorted(tools, key=lambda tool: tool.id)
+    for manifest in sorted(root.glob("*/tool.toml")):
+        entry = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        tools.append(
+            Tool(
+                id=manifest.parent.name,
+                name=entry.get("name", manifest.parent.name),
+                directory=manifest.parent,
+                scripts={key: value for key, value in entry.items() if key in BENCHMARKS},
+            )
+        )
+    return tools
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,14 +104,16 @@ class Environment:
             raise RunError(f"`{command}` is not on PATH")
         return found
 
-    def run(self, command: list[str], cwd: Path, log: Path) -> None:
+    def run(
+        self, command: list[str], cwd: Path, log: Path, extra: dict[str, str] | None = None
+    ) -> None:
         """Run to completion, keeping everything it printed in `log`."""
         log.parent.mkdir(parents=True, exist_ok=True)
         with log.open("w", encoding="utf-8") as out:
             done = subprocess.run(
                 command,
                 cwd=cwd,
-                env=self.variables,
+                env={**self.variables, **(extra or {})},
                 stdout=out,
                 stderr=subprocess.STDOUT,
                 check=False,

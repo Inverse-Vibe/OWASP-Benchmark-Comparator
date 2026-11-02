@@ -1,11 +1,12 @@
 """`compare_owasp_benchmark <java|python>`: run tools, then OWASP's scorecard.
 
-    compare_owasp_benchmark java                     every tool with a Java script
+    compare_owasp_benchmark java                     every tool that runs on Java
     compare_owasp_benchmark java --tool sonarqube    just these
 
 For the chosen benchmark, in a fresh clone of its pinned commit:
 
-1. each tool's own script from that repository (`scripts/run<Tool>.sh`)
+1. each tool's script - from its folder under tools/, or one the benchmark
+   repository ships - which leaves a results file in `results/`
 2. that repository's `createScorecards.sh`, which scores everything in
    `results/` - the tools just run and the reference results OWASP ships
 
@@ -68,11 +69,17 @@ def compare(args: argparse.Namespace) -> int:
 
     failed = 0
     for tool in tools:
-        print(f"[{tool.id}] {tool.scripts[benchmark.id]} ...", flush=True)
+        script = tool.script(benchmark.id, clone)
+        print(f"[{tool.id}] {script.relative_to(script.parents[1])} ...", flush=True)
         log = work / benchmark.id / "logs" / f"{tool.id}.log"
         before = {path.name for path in (clone / "results").iterdir()}
+        given = {
+            "BENCHMARK_LANGUAGE": benchmark.id,
+            "BENCHMARK_RESULTS_PREFIX": benchmark.results_prefix,
+            "TOOL_DIR": str(tool.directory),
+        }
         try:
-            env.run([bash, tool.scripts[benchmark.id]], clone, log)
+            env.run([bash, str(script)], clone, log, given)
         except RunError as error:
             print(f"[{tool.id}] FAILED: {error}", file=sys.stderr)
             failed += 1
