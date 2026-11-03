@@ -8,7 +8,9 @@ so it holds exactly what OWASP published at that commit and nothing else.
 
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tomllib
@@ -160,16 +162,68 @@ def fresh_clone(submodule: Path, clone: Path, env: Environment) -> None:
     subprocess.run([git, "-C", str(clone), "clean", "-q", "-fdx"], env=env.variables, check=True)
 
 
+def _inject_readers(clone: Path) -> list[str]:
+    """Copy custom SARIF readers shipped under ``tools/*/benchmarkutils/`` into
+    the BenchmarkUtils clone and register them in ``Reader.java`` (one import,
+    one ``new X(),``), so a tool OWASP upstream has no reader for - InverseVibe,
+    say - scores with no manual edit. Idempotent, and registration order does
+    not matter to the scorer."""
+    java = clone / "plugin" / "src" / "main" / "java"
+    reader_java = java / "org" / "owasp" / "benchmarkutils" / "score" / "parsers" / "Reader.java"
+    readers = sorted(TOOLS.glob("*/benchmarkutils/*.java"))
+    if not readers or not reader_java.is_file():
+        return []
+    text = reader_java.read_text(encoding="utf-8")
+    done: list[str] = []
+    for src in readers:
+        cls = src.stem
+        body = src.read_text(encoding="utf-8")
+        match = re.search(r"package\s+([\w.]+)\s*;", body)
+        pkg = match.group(1) if match else "org.owasp.benchmarkutils.score.parsers.sarif"
+        dest = java.joinpath(*pkg.split(".")) / src.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        if f"new {cls}(" in text:
+            done.append(cls)
+            continue
+        out, added_import, added_new = [], False, False
+        for line in text.splitlines(keepends=True):
+            if not added_import and line.startswith(
+                "import org.owasp.benchmarkutils.score.parsers.sarif."
+            ):
+                out.append(f"import {pkg}.{cls};\n")
+                added_import = True
+            if not added_new and re.match(r"\s*new [A-Za-z0-9_]+Reader\(\),", line):
+                indent = line[: len(line) - len(line.lstrip())]
+                out.append(f"{indent}new {cls}(),\n")
+                added_new = True
+            out.append(line)
+        text = "".join(out)
+        done.append(cls)
+    reader_java.write_text(text, encoding="utf-8")
+    return done
+
+
 def install_scorer(work: Path, env: Environment) -> str:
     """BenchmarkUtils, built and installed from its pin the way its README says:
-    `mvn install`. Skipped when that commit is what was last installed."""
+    `mvn install`, with any custom SARIF readers under `tools/*/benchmarkutils/`
+    injected first (see `_inject_readers`). Skipped when the same commit AND the
+    same readers were last installed."""
     submodule = ROOT / SCORER
     commit = pinned(submodule, env)
+    readers = sorted(TOOLS.glob("*/benchmarkutils/*.java"))
+    marker = commit + "".join(
+        f"\n{path.relative_to(ROOT).as_posix()}:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+        for path in readers
+    )
     stamp = work / f"{SCORER}.installed"
-    if stamp.exists() and stamp.read_text().strip() == commit:
+    if stamp.exists() and stamp.read_text() == marker:
         return commit
     clone = work / SCORER
     fresh_clone(submodule, clone, env)
+    injected = _inject_readers(clone)
+    if injected:
+        print(f"[scorer] injected reader(s): {', '.join(injected)}", flush=True)
     # Through bash, as OWASP's own scripts call it: Maven's launcher is a shell
     # script, which a Windows PATH lookup does not see.
     env.run(
@@ -177,5 +231,5 @@ def install_scorer(work: Path, env: Environment) -> str:
         clone,
         work / "logs" / "scorer.log",
     )
-    stamp.write_text(commit + "\n")
+    stamp.write_text(marker)
     return commit

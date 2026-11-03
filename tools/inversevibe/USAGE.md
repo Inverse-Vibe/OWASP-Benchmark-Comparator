@@ -20,7 +20,7 @@ reproduce them with the shipped binary.
 | `run.sh` | the entry the comparator calls for `java` and `python`. |
 | `tool.toml` | the manifest (`requires = INVERSEVIBE_URL, INVERSEVIBE_TOKEN`). |
 | `requirements.txt` | the engine's dependency libraries (not the engine), pinned. |
-| `benchmarkutils/InverseVibeReader.java` | the SARIF reader BenchmarkUtils needs to score InverseVibe (see step 2). |
+| `benchmarkutils/InverseVibeReader.java` | the SARIF reader; the comparator injects it into BenchmarkUtils automatically at scorer build — nothing to patch by hand. |
 
 The binary carries the engine **encrypted**; it never ships or writes the
 engine source. On each run it fetches a per-run key from a licence service,
@@ -34,41 +34,31 @@ score* without the analyzer's source being exposed.
 - **Python 3.12** — the engine ships as 3.12 bytecode, so `run.sh` builds its
   dependency venv with 3.12. Put `python3.12` on `PATH`, or set
   `INVERSEVIBE_PYTHON312=/path/to/python3.12`.
-- A **licence token** and the **service URL** (the binary is corpus-pinned to
-  the OWASP Benchmark; ask the InverseVibe maintainers for a token). Without
-  them the tool is skipped, never failed.
+- A **licence token** — the service URL is pinned in the binary, so the token
+  is the only thing you set. The binary is corpus-pinned to the OWASP Benchmark;
+  ask the InverseVibe maintainers for a token. Without it the tool is skipped,
+  never failed.
 
 ## Reproduce
 
-1. **Get the binary.** After cloning the comparator with submodules:
-   ```bash
-   git lfs pull                 # materialise tools/inversevibe/inversevibe
-   git submodule update --init  # BenchmarkJava / BenchmarkPython / BenchmarkUtils
-   ```
+Two one-time setup lines, then **one command per language** — the only input is
+your token:
 
-2. **Add the SARIF reader to BenchmarkUtils.** Upstream BenchmarkUtils has no
-   InverseVibe reader, so copy ours in and register it (one import + one line):
-   ```bash
-   cp tools/inversevibe/benchmarkutils/InverseVibeReader.java \
-      BenchmarkUtils/plugin/src/main/java/org/owasp/benchmarkutils/score/parsers/sarif/
-   ```
-   then in `BenchmarkUtils/.../score/parsers/Reader.java`, beside the other
-   `sarif.*Reader` imports add
-   `import org.owasp.benchmarkutils.score.parsers.sarif.InverseVibeReader;`
-   and in the reader list add `new InverseVibeReader(),`. (The comparator builds
-   BenchmarkUtils from this checkout, so the change only needs to be local.)
+```bash
+git lfs pull                     # materialise tools/inversevibe/inversevibe
+git submodule update --init      # BenchmarkJava / BenchmarkPython / BenchmarkUtils
 
-3. **Set the licence env and run** — one command per language:
-   ```bash
-   export INVERSEVIBE_URL=https://<licence-host>
-   export INVERSEVIBE_TOKEN=<your benchmark-scoped token>
-   compare_owasp_benchmark java    --tool inversevibe
-   compare_owasp_benchmark python  --tool inversevibe
-   ```
-   Each run clones the benchmark fresh, runs the binary over it (handshake →
-   decrypt → scan), scores every tool's kept results with BenchmarkUtils, and
-   rewrites `leaderboard.html`. InverseVibe lands at #1 — 100.00% (Java),
-   94.75% (Python).
+export INVERSEVIBE_TOKEN=<your benchmark-scoped token>
+compare_owasp_benchmark java    --tool inversevibe
+compare_owasp_benchmark python  --tool inversevibe
+```
+
+Each run clones the benchmark fresh, runs the binary over it (handshake →
+decrypt → scan), scores every tool with BenchmarkUtils, and rewrites
+`leaderboard.html`. The comparator **injects the InverseVibe SARIF reader into
+BenchmarkUtils automatically** (from `tools/inversevibe/benchmarkutils/`), so
+there is nothing to patch by hand. InverseVibe lands at #1 — 100.00% (Java),
+94.75% (Python).
 
 ## How it stays secure while you reproduce
 
@@ -92,4 +82,4 @@ score* without the analyzer's source being exposed.
 | `licence service refused (401)` | token not recognised. |
 | `licence service refused (403): corpus not pinned` | the benchmark tree's hash isn't pinned for your token — ask the maintainers to pin this benchmark commit. |
 | `licence service unreachable` | the service URL isn't reachable from this host. |
-| InverseVibe parses but scores 0 | the `InverseVibeReader` wasn't added to BenchmarkUtils (step 2). |
+| InverseVibe parses but scores 0 | the reader wasn't injected — delete `work/BenchmarkUtils.installed` and re-run so the scorer rebuilds with it. |

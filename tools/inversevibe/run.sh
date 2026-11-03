@@ -18,7 +18,9 @@
 # binary hashes the tree it is given and the service decides whether it is pinned.
 
 set -euo pipefail
-: "${INVERSEVIBE_URL:?}" "${INVERSEVIBE_TOKEN:?}" "${BENCHMARK_LANGUAGE:?}"
+# Only the token is required; the licence service URL is pinned in the binary
+# (override with INVERSEVIBE_URL if you must point elsewhere).
+: "${INVERSEVIBE_TOKEN:?}" "${BENCHMARK_LANGUAGE:?}"
 : "${BENCHMARK_RESULTS_PREFIX:?}" "${TOOL_DIR:?}" "${TOOL_CACHE:?}"
 
 if [[ -n "${INVERSEVIBE_ENGINE_PYTHON:-}" ]]; then

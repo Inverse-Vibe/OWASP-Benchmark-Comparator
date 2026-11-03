@@ -2,9 +2,11 @@ name = "InverseVibe"
 
 # InverseVibe ships as a protected binary: the engine's algorithm ships
 # encrypted (core.enc) and the binary cannot run it without a per-run key minted
-# by the licence service for the pinned benchmark corpus. Set the service URL and
-# a benchmark-scoped token; without them the tool is skipped, never failed.
-requires = ["INVERSEVIBE_URL", "INVERSEVIBE_TOKEN"]
+# by the licence service for the pinned benchmark corpus. The service URL is
+# pinned into the binary, so the only thing to set is a benchmark-scoped token
+# (override the URL with INVERSEVIBE_URL if needed). Without the token the tool
+# is skipped, never failed.
+requires = ["INVERSEVIBE_TOKEN"]
 
 java = "./run.sh"
 python = "./run.sh"
